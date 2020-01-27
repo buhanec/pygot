@@ -90,7 +90,7 @@ def test_module_doc(module: pkgutil.ModuleInfo) -> None:
 
 @pytest.mark.parametrize('module', _ALL_MODULES.values(),
                          ids=list(_ALL_MODULES.keys()))
-def test_module_doc(module: pkgutil.ModuleInfo) -> None:
+def test_module_logger(module: pkgutil.ModuleInfo) -> None:
     imported = importlib.import_module(module.name)
     if (hasattr(imported, 'logger')
             and imported.logger.name != module.name):
