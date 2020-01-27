@@ -33,5 +33,8 @@ urwid==2.1.0              # via pudb
 wcwidth==0.1.8            # via prompt-toolkit, pytest
 zipp==2.1.0               # via importlib-metadata
 
+# TODO: Compile pylint
+pylint==2.4.4
+
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
