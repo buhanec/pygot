@@ -7,7 +7,7 @@ matrix:
     - name: Python 3.8 on Linux
       python: 3.8
       os: linux
-    - name: Python 3.9 on Linux
+    - name: Python Nightly on Linux
       python: nightly
       os: linux
     - name: Python 3.7 on Windows
@@ -24,11 +24,11 @@ matrix:
         - choco install python --version 3.8.1
       env:
         - PATH=/c/Python38:/c/Python38/Scripts:/c/tools/bin:$PATH**
-    - name: Python 3.9 on Windows
+    - name: Python Pre on Windows
       language: shell
       os: windows
       before_install:
-        - choco install python --version 3.9.0-a3
+        - choco install python --pre
       env:
         - PATH=/c/Python39:/c/Python39/Scripts:/c/tools/bin:$PATH**
 install:
