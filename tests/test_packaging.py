@@ -74,6 +74,10 @@ def test_module_all(module: pkgutil.ModuleInfo) -> None:
     if (not isinstance(imported.__all__, Sequence)
             or isinstance(imported.__all__, MutableSequence)):
         raise AssertionError(f'{module.name}.__all__ must be immutable')
+    for attr in imported.__all__:
+        if not hasattr(imported, attr):
+            raise AssertionError(f'{module.name}.__all__ lists {attr!r} but '
+                                 f'{attr!r} not found')
 
 
 @pytest.mark.parametrize('module', _ALL_MODULES.values(),
@@ -111,7 +115,8 @@ def test_newline_end_of_files(filename: str) -> None:
             content = f.read().decode()
     except (PermissionError, ValueError):
         return
-    assert not content or content.endswith('\n')
+    if content and not content.endswith('\n'):
+        raise AssertionError(f'{filename!r} does not end with a newline')
 
 
 @pytest.mark.parametrize('filename', _ALL_FILES)
@@ -121,4 +126,5 @@ def test_no_trailing_spaces(filename: str) -> None:
             content = f.read().decode()
     except (PermissionError, ValueError):
         return
-    assert not any(l != l.rstrip() for l in content.splitlines())
+    if any(l != l.rstrip() for l in content.splitlines()):
+        raise AssertionError(f'{filename!r} has trailing whitespace')
