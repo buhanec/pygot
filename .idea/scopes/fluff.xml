@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="fluff" pattern="file[pygot]:README.md||file[pygot]:setup.py" />
+</component>

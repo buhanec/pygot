@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="rc" pattern="file[pygot]:.gitignore||file[pygot]:pygot.iml" />
+</component>
