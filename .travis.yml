@@ -22,17 +22,15 @@ matrix:
       os: windows
       before_install:
         - choco install python --version 3.8.1
-        - alias pip=pip3
       env:
-        - PATH=/c/Python37:/c/Python37/Scripts:/c/tools/bin:$PATH**
+        - PATH=/c/Python38:/c/Python38/Scripts:/c/tools/bin:$PATH**
     - name: Python 3.9 on Windows
       language: shell
       os: windows
       before_install:
         - choco install python --version 3.9.0-a3
-        - alias pip=pip3
       env:
-        - PATH=/c/Python37:/c/Python37/Scripts:/c/tools/bin:$PATH**
+        - PATH=/c/Python39:/c/Python39/Scripts:/c/tools/bin:$PATH**
 install:
   - pip install -r requirements.txt
 script:
