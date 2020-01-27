@@ -1,11 +1,38 @@
 language: python
-os:
-  - windows
-  - linux
-python:
-  - 3.7
-  - 3.8
-  - nightly
+matrix:
+  include:
+    - name: Python 3.7 on Linux
+      python: 3.7
+      os: linux
+    - name: Python 3.8 on Linux
+      python: 3.8
+      os: linux
+    - name: Python 3.9 on Linux
+      python: nightly
+      os: linux
+    - name: Python 3.7 on Windows
+      language: shell
+      os: windows
+      before_install:
+        - choco install python --version 3.7.6
+      env:
+        - PATH=/c/Python37:/c/Python37/Scripts:/c/tools/bin:$PATH**
+    - name: Python 3.8 on Windows
+      language: shell
+      os: windows
+      before_install:
+        - choco install python --version 3.8.1
+        - alias pip=pip3
+      env:
+        - PATH=/c/Python37:/c/Python37/Scripts:/c/tools/bin:$PATH**
+    - name: Python 3.9 on Windows
+      language: shell
+      os: windows
+      before_install:
+        - choco install python --version 3.9.0-a3
+        - alias pip=pip3
+      env:
+        - PATH=/c/Python37:/c/Python37/Scripts:/c/tools/bin:$PATH**
 install:
   - pip install -r requirements.txt
 script:
