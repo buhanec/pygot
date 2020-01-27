@@ -1,2 +1,3 @@
-# pygot
-Python Game of Thrones board game server
+# PyGoT
+
+Python Game of Thrones board game server.
