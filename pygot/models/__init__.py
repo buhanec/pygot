@@ -4,12 +4,14 @@ from __future__ import annotations
 
 __all__ = ('House', 'HouseInfo',)
 
-from dataclasses import dataclass
+import dataclasses
 from enum import Enum
 
+from pygot.models.serialisation import JSONMixin, ReplaceMixin
 
-@dataclass(frozen=True)
-class HouseInfo:
+
+@dataclasses.dataclass(frozen=True)
+class HouseInfo(JSONMixin):
     """House information."""
 
     name: str
@@ -52,3 +54,54 @@ class House(Enum):
 
     def __repr__(self) -> str:
         return f'<House.{self.name}>'
+
+
+class Terrain(Enum):
+    """Terrain type."""
+
+    LAND = 'Land'
+    WATER = 'Water'
+
+
+@dataclasses.dataclass(frozen=True)
+class UnitInfo(JSONMixin):
+    """House information."""
+
+    name: str
+    terrain: Terrain
+    value: int
+
+
+_FOOTMAN = UnitInfo(name='Footman',
+                    terrain=Terrain.LAND,
+                    value=1)
+
+_KNIGHT = UnitInfo(name='Knight',
+                   terrain=Terrain.LAND,
+                   value=2)
+
+_SHIP = UnitInfo(name='Ship',
+                 terrain=Terrain.WATER,
+                 value=1)
+
+_SIEGE = UnitInfo(name='Siege',
+                  terrain=Terrain.LAND,
+                  value=2)
+
+
+class Unit(Enum):
+    """Unit type."""
+
+    FOOTMAN = _FOOTMAN
+    KNIGHT = _KNIGHT
+    SHIP = _SHIP
+    SIEGE = _SIEGE
+
+
+@dataclasses.dataclass(frozen=True)
+class UnitInstance(ReplaceMixin, JSONMixin):
+    """Unit instance."""
+
+    type: Unit
+    house: House
+    retreating: bool
