@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 __all__ = ('snake_case', 'camel_case', 'IdentifiableMixin',
-           'JSONMixin', 'ReplaceMixin')
+           'JSONMixin', 'ReplaceMixin', 'JSON', 'JSONType')
 
 from abc import abstractmethod
 import dataclasses
