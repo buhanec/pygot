@@ -43,7 +43,7 @@ jobs:
       env:
         - PATH=/c/Python39:/c/Python39/Scripts:/c/tools/bin:$PATH**
     - stage: Success notification
-    - name: Success notification
+      name: Success notification
       language: shell
       install:
       script:
