@@ -7,7 +7,6 @@ import importlib
 import itertools
 import os
 import pkgutil
-import subprocess
 from typing import MutableSequence, Sequence
 
 import pytest
@@ -31,12 +30,6 @@ _TEST_MODULES[tests.__name__] = _ROOT_MODULES[tests.__name__]
 
 _ALL_MODULES = dict(itertools.chain(_SRC_MODULES.items(),
                                     _TEST_MODULES.items()))
-
-# Find files to play with
-_ALL_FILES = subprocess.run(('git', 'ls-files'),
-                            capture_output=True,
-                            check=True).stdout.decode().splitlines()
-_ALL_FILES = [f for f in _ALL_FILES if not f.startswith('.idea')]
 
 
 @pytest.mark.parametrize('attr', (
@@ -63,8 +56,7 @@ def test_version_valid() -> None:
         raise AssertionError(str(e)) from e
 
 
-@pytest.mark.parametrize('module', _SRC_MODULES.values(),
-                         ids=list(_SRC_MODULES.keys()))
+@pytest.mark.parametrize('module', _SRC_MODULES.values(), ids=lambda m: m.name)
 def test_module_all(module: pkgutil.ModuleInfo) -> None:
     imported = importlib.import_module(module.name)
     if not hasattr(imported, '__all__'):
@@ -80,16 +72,14 @@ def test_module_all(module: pkgutil.ModuleInfo) -> None:
                                  f'{attr!r} not found')
 
 
-@pytest.mark.parametrize('module', _ALL_MODULES.values(),
-                         ids=list(_ALL_MODULES.keys()))
+@pytest.mark.parametrize('module', _ALL_MODULES.values(), ids=lambda m: m.name)
 def test_module_doc(module: pkgutil.ModuleInfo) -> None:
     imported = importlib.import_module(module.name)
     if imported.__doc__ is None or not imported.__doc__.strip():
         raise AssertionError(f'{module.name} is missing module docstring')
 
 
-@pytest.mark.parametrize('module', _ALL_MODULES.values(),
-                         ids=list(_ALL_MODULES.keys()))
+@pytest.mark.parametrize('module', _ALL_MODULES.values(), ids=lambda m: m.name)
 def test_module_logger(module: pkgutil.ModuleInfo) -> None:
     imported = importlib.import_module(module.name)
     if (hasattr(imported, 'logger')
@@ -98,8 +88,7 @@ def test_module_logger(module: pkgutil.ModuleInfo) -> None:
                              f'{imported.logger.name}')
 
 
-@pytest.mark.parametrize('module', _ALL_MODULES.values(),
-                         ids=list(_ALL_MODULES.keys()))
+@pytest.mark.parametrize('module', _ALL_MODULES.values(), ids=lambda m: m.name)
 def test_module_future_import(module: pkgutil.ModuleInfo) -> None:
     imported = importlib.import_module(module.name)
     if (not hasattr(imported, 'annotations')
@@ -108,23 +97,20 @@ def test_module_future_import(module: pkgutil.ModuleInfo) -> None:
                              f"import annotations' statement")
 
 
-@pytest.mark.parametrize('filename', _ALL_FILES)
-def test_newline_end_of_files(filename: str) -> None:
-    try:
-        with open(filename, 'rb') as f:
-            content = f.read().decode()
-    except (PermissionError, ValueError):
-        return
+@pytest.mark.parametrize('module', _ALL_MODULES.values(), ids=lambda m: m.name)
+def test_newline_end_of_files(module: pkgutil.ModuleInfo) -> None:
+    imported = importlib.import_module(module.name)
+    with open(imported.__file__) as f:
+        content = f.read()
     if content and not content.endswith('\n'):
-        raise AssertionError(f'{filename!r} does not end with a newline')
+        raise AssertionError(f'{module.name} does not end with a newline')
 
 
-@pytest.mark.parametrize('filename', _ALL_FILES)
-def test_no_trailing_spaces(filename: str) -> None:
-    try:
-        with open(filename, 'rb') as f:
-            content = f.read().decode()
-    except (PermissionError, ValueError):
-        return
+@pytest.mark.parametrize('module', _ALL_MODULES.values(),
+                         ids=list(_ALL_MODULES.keys()))
+def test_no_trailing_spaces(module: pkgutil.ModuleInfo) -> None:
+    imported = importlib.import_module(module.name)
+    with open(imported.__file__) as f:
+        content = f.read()
     if any(l != l.rstrip() for l in content.splitlines()):
-        raise AssertionError(f'{filename!r} has trailing whitespace')
+        raise AssertionError(f'{module.name} has trailing whitespace')
