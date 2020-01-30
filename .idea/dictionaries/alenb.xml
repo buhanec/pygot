@@ -2,6 +2,8 @@
   <dictionary name="alenb">
     <words>
       <w>baratheon</w>
+      <w>classmethod</w>
+      <w>contextlib</w>
       <w>deserailisable</w>
       <w>deserialisation</w>
       <w>deserialise</w>
@@ -9,12 +11,15 @@
       <w>greyjoy</w>
       <w>lannister</w>
       <w>martell</w>
+      <w>pycodestyle</w>
+      <w>pydocstyle</w>
       <w>pylint</w>
       <w>serialisable</w>
       <w>serialisation</w>
       <w>serialise</w>
       <w>serialised</w>
       <w>stark</w>
+      <w>typecheck</w>
       <w>tyrell</w>
       <w>westeros</w>
     </words>

@@ -16,6 +16,3 @@ __url__ = 'https://github.com/buhanec/pygot'
 __author__ = 'Alen Buhanec'
 __author_email__ = 'alen.buhanec@gmail.com'
 __copyright__ = f'(c) {__author__} <{__author_email__}>'
-
-
-import pylint
