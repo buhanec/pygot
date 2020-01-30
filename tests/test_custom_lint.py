@@ -57,7 +57,7 @@ def test_version_valid() -> None:
 
 
 @pytest.mark.parametrize('module', _SRC_MODULES.values(), ids=lambda m: m.name)
-def test_module_all(module: pkgutil.ModuleInfo) -> None:
+def test_modul_all(module: pkgutil.ModuleInfo) -> None:
     imported = importlib.import_module(module.name)
     if not hasattr(imported, '__all__'):
         raise AssertionError(f'{module.name} is missing __all__')
@@ -70,6 +70,9 @@ def test_module_all(module: pkgutil.ModuleInfo) -> None:
         if not hasattr(imported, attr):
             raise AssertionError(f'{module.name}.__all__ lists {attr!r} but '
                                  f'{attr!r} not found')
+    sorted_all = tuple(sorted(imported.__all__, key=str.lower))
+    if tuple(imported.__all__) != sorted_all:
+        raise AssertionError(f'{module.name}.__all__ is not sorted')
 
 
 @pytest.mark.parametrize('module', _ALL_MODULES.values(), ids=lambda m: m.name)

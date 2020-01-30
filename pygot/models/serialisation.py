@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-__all__ = ('snake_case', 'camel_case', 'IdentifiableMixin',
-           'JSONMixin', 'ReplaceMixin', 'JSON', 'JSONType')
+__all__ = ('camel_case', 'IdentifiableMixin', 'JSON', 'JSONMixin',
+           'JSONType', 'ReplaceMixin', 'snake_case')
 
 from abc import abstractmethod
 import dataclasses
