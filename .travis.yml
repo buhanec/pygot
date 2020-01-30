@@ -7,8 +7,8 @@ python:
 install:
   - pip install -r requirements.txt
 script:
-  - pycodestyle
-  - pydocstyle
+  - pycodestyle pygot tests
+  - pydocstyle pygot tests
   - pytest
   - pylint --rcfile=setup.cfg pygot tests  # TODO: Remove rcfile when Python 2.5.0 released
 after_success:
