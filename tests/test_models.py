@@ -7,14 +7,14 @@ import pytest
 from pygot import models
 
 
-@pytest.mark.parametrize('house', (
-        'baratheon',
-        'greyjoy',
-        'lannister',
-        'martell',
-        'stark',
-        'tyrell',
-))
+@pytest.mark.parametrize('house', [
+    'baratheon',
+    'greyjoy',
+    'lannister',
+    'martell',
+    'stark',
+    'tyrell',
+])
 def test_houses_set_up(house: str) -> None:
     if not hasattr(models.House, house.upper()):
         raise AssertionError(f'Missing house {house!r}')

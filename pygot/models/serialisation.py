@@ -95,7 +95,7 @@ class IdentifiableMixin(Generic[T]):
     @abstractmethod
     def id(self) -> T:
         """
-        Unique ID for a static instance.
+        Get unique ID for a static instance.
 
         :return: Unique ID
         """

@@ -32,16 +32,16 @@ _ALL_MODULES = dict(itertools.chain(_SRC_MODULES.items(),
                                     _TEST_MODULES.items()))
 
 
-@pytest.mark.parametrize('attr', (
-        '__title__',
-        '__description__',
-        '__url__',
-        '__version__',
-        '__author__',
-        '__author_email__',
-        '__license__',
-        '__copyright__',
-))
+@pytest.mark.parametrize('attr', [
+    '__title__',
+    '__description__',
+    '__url__',
+    '__version__',
+    '__author__',
+    '__author_email__',
+    '__license__',
+    '__copyright__',
+])
 def test_package_meta(attr: str) -> None:
     if not hasattr(pygot, attr):
         raise AssertionError(f'{pygot.__name__} is missing {attr}')

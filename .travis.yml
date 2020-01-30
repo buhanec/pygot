@@ -7,11 +7,12 @@ python:
 install:
   - pip install -r requirements.txt
 script:
-  - pytest --cov=pygot tests/
-  - pylint pygot tests
+  - pycodestyle
+  - pydocstyle
+  - pytest
+  - pylint --rcfile=setup.cfg pygot tests  # TODO: Remove rcfile when Python 2.5.0 released
 after_success:
   - codecov
-  - coverage xml
   - python-codacy-coverage -r coverage.xml
 after_failure:
   - wget  https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh
