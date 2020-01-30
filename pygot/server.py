@@ -28,6 +28,7 @@ class APIException(Exception):
         self.extra_info = extra_info
 
     def to_json(self) -> JSON:
+        """Generate JSON structure"""
         return {
             'code': self.code.value,
             'message': self.code.phrase,
@@ -38,6 +39,7 @@ class APIException(Exception):
 
 @app.route('/')
 def index():
+    """Project index."""
     return jsonify({
         '/house/<house_name>': 'Get house information'
     })
@@ -62,6 +64,7 @@ def get_house(house_name: str):
 
 @app.errorhandler(APIException)
 def handle_invalid_usage(error: APIException):
+    """Invalid usage request handler."""
     response: Response = jsonify(error.to_json())
     response.status_code = error.code
     return response
