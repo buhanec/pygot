@@ -3,6 +3,8 @@ engines:
  pylint:
    enabled: true
    python_version: 3
+   exclude_paths:
+     - setup.py
  prospector:
    enabled: true
    python_version: 3
