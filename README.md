@@ -10,3 +10,15 @@
 -->
 
 Python Game of Thrones board game server.
+
+
+## Linting and Testing
+
+Simple four step pipeline, eventually feeding coverage to [Codecov.io](https://codecov.io/gh/buhanec/pygot) and [Codacy](https://www.codacy.com/manual/buhanec/pygot).
+
+```shell script
+pytest
+pycodestyle pygot tests
+pydocstyle pygot tests
+pylint --rcfile=setup.cfg pygot tests
+```
