@@ -13,9 +13,6 @@ after_success:
   - codecov
   - coverage xml
   - python-codacy-coverage -r coverage.xml
-  - wget https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh
-  - chmod +x send.sh
-  - ./send.sh success $DISCORD_WEBHOOK_URL
 after_failure:
   - wget  https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh
   - chmod +x send.sh
@@ -44,3 +41,13 @@ jobs:
         - choco install python --pre
       env:
         - PATH=/c/Python39:/c/Python39/Scripts:/c/tools/bin:$PATH**
+    - stage: Success notification
+    - name: Success notification
+      language: shell
+      install:
+      script:
+        - wget https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh
+        - chmod +x send.sh
+        - ./send.sh success $DISCORD_WEBHOOK_URL
+      after_success:
+      after_failure:
