@@ -7,10 +7,12 @@ python:
 install:
   - pip install -r requirements.txt
 script:
-  - pytest --cov pygot tests/
+  - pytest --cov=pygot tests/
   - pylint pygot tests
 after_success:
   - codecov
+  - coverage xml
+  - python-codacy-coverage -r coverage.xml
   - wget https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh
   - chmod +x send.sh
   - ./send.sh success $DISCORD_WEBHOOK_URL
