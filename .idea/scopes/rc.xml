@@ -1,3 +1,3 @@
 <component name="DependencyValidationManager">
-  <scope name="rc" pattern="file[pygot]:.gitignore||file[pygot]:pygot.iml||file[pygot]:.travis.yml||file[pygot]:.pylintrc||file[pygot]:.coveragerc" />
+  <scope name="rc" pattern="file[pygot]:.gitignore||file[pygot]:pygot.iml||file[pygot]:.travis.yml||file[pygot]:.pylintrc||file[pygot]:.coveragerc||file[pygot]:codecov.yml||file[pygot]:azure-pipelines.yml" />
 </component>
