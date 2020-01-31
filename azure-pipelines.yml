@@ -1,0 +1,76 @@
+name: $(BuildDefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
+variables:
+  moduleName: pygot
+  testsName: tests
+
+trigger:
+  batch: true
+  branches:
+    include:
+      - master
+
+pr:
+  autoCancel: true
+  branches:
+    include:
+      - master
+
+schedules:
+  - cron: 0 0 * * *
+    displayName: Daily build
+    branches:
+      include:
+        - master
+    always: true
+
+pool:
+  vmImage: $(vmImage)
+
+strategy:
+  matrix:
+    linux37:
+      versionSpec: '3.7'
+      vmImage: ubuntu-latest
+    linux38:
+      versionSpec: '3.8'
+      vmImage: ubuntu-latest
+    windows37:
+      versionSpec: '3.7'
+      vmImage: windows-latest
+    windows38:
+      versionSpec: '3.8'
+      vmImage: windows-latest
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: $(versionSpec)
+  displayName: python$(versionSpec)
+
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: pip
+
+- script: pytest
+  displayName: pytest $(testsName)
+
+- script: pycodestyle $(moduleName) $(testsName)
+  displayName: pycodestyle
+
+- script: pydocstyle $(moduleName) $(testsName)
+  displayName: pydocstyle
+
+- script: pylint --rcfile=setup.cfg $(moduleName) $(testsName)
+  displayName: pylint
+
+- script: codecov
+  displayName: codecov
+  env:
+    CODECOV_TOKEN: $(CODECOV_TOKEN)
+
+- script: python-codacy-coverage -r coverage.xml
+  displayName: python-codacy-coverage
+  env:
+    CODACY_PROJECT_TOKEN: $(CODACY_PROJECT_TOKEN)
