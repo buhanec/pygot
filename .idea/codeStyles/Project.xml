@@ -6,5 +6,8 @@
       <option name="OPTIMIZE_IMPORTS_SORT_BY_TYPE_FIRST" value="false" />
       <option name="OPTIMIZE_IMPORTS_JOIN_FROM_IMPORTS_WITH_SAME_SOURCE" value="true" />
     </Python>
+    <codeStyleSettings language="Python">
+      <option name="BLANK_LINES_AROUND_CLASS" value="0" />
+    </codeStyleSettings>
   </code_scheme>
 </component>

@@ -6,6 +6,8 @@ __all__ = ('is_optional', 'optional_subtype', 'type_name')
 
 from typing import Any, Callable, Union
 
+NoneType = type(None)
+
 
 def is_optional(obj: Any) -> bool:
     """
@@ -19,7 +21,7 @@ def is_optional(obj: Any) -> bool:
                 and (str(obj) == 'typing.Optional'
                      or (obj.__origin__ is Union
                          and len(obj.__args__) == 2
-                         and type(None) in obj.__args__)))
+                         and NoneType in obj.__args__)))
     except AttributeError:
         return False
 

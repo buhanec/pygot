@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Union, Any
+from typing import Any, List, Optional, Union, Type
 
 import pytest
 
@@ -28,7 +28,7 @@ from pygot import utils
     (List[str], False),
     (type('A', tuple(), dict()), False),
     (type('Optional', tuple(), dict()), False),
-], ids=lambda a: repr(a))
+], ids=repr)
 def test_is_optional(obj: Any, expected: bool) -> None:
     assert utils.is_optional(obj) == expected
 
@@ -37,7 +37,7 @@ def test_is_optional(obj: Any, expected: bool) -> None:
     (Optional[str], str),
     (Optional[int], int),
     (Optional[List[int]], List[int]),
-], ids=lambda a: repr(a))
+], ids=repr)
 def test_optional_subtype(obj: Any, expected: Any) -> None:
     assert utils.optional_subtype(obj) == expected
 
@@ -54,9 +54,11 @@ def test_optional_subtype_raises(obj: Any) -> None:
         utils.optional_subtype(obj)
 
 
-def _test():
+def _test() -> Type[Any]:
+    """Test case function."""
+    # pylint: disable=too-few-public-methods
     class Test:
-        pass
+        """Test case class."""
     return Test
 
 
@@ -71,7 +73,7 @@ def _test():
     (_test, f'{__name__}._test'),
     (_test(), f'{__name__}._test.<locals>.Test'),
     (Optional, 'typing.Optional[Any]'),
-], ids=lambda a: repr(a))
+], ids=repr)
 def test_type_name(obj: Any, expected: str) -> None:
     assert utils.type_name(obj) == expected
 
@@ -87,6 +89,6 @@ def test_type_name(obj: Any, expected: str) -> None:
     (_test, f'{__name__}._test'),
     (_test(), f'{__name__}.Test'),
     (Optional, 'typing.Optional[Any]'),
-], ids=lambda a: repr(a))
+], ids=repr)
 def test_type_name_qualname(obj: Any, expected: str) -> None:
     assert utils.type_name(obj, local_name=True) == expected
