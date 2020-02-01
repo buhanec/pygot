@@ -14,6 +14,7 @@
       <w>pycodestyle</w>
       <w>pydocstyle</w>
       <w>pylint</w>
+      <w>qualname</w>
       <w>serialisable</w>
       <w>serialisation</w>
       <w>serialise</w>
