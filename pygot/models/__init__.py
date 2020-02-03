@@ -7,7 +7,7 @@ __all__ = ('House', 'HouseInfo',)
 import dataclasses
 from enum import Enum
 
-from pygot.models.serialisation import JSONMixin, ReplaceMixin
+from pygot.serialisation import JSONMixin, ReplaceMixin
 
 
 @dataclasses.dataclass(frozen=True)
