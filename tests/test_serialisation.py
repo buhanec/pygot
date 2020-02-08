@@ -805,9 +805,7 @@ def test_orjson_response(serialisation_jsonify: mock.MagicMock,
     serialisation.ORJSONResponse(321)
 
     assert serialisation_jsonify.call_count == 1
-    assert serialisation_jsonify.call_args.args == (321,)
-    assert serialisation_jsonify.call_args.kwargs == {}
+    assert serialisation_jsonify.call_args == ((321,), {})
 
     assert orjson_dumps.call_count == 1
-    assert orjson_dumps.call_args.args == (123,)
-    assert orjson_dumps.call_args.kwargs == {}
+    assert orjson_dumps.call_args == ((123,), {})
