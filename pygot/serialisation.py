@@ -150,7 +150,7 @@ def jsonify(obj: Any,
     if dataclasses.is_dataclass(obj):
         return _jsonify_dataclass(obj,
                                   camel_case_keys=camel_case_keys,
-                                  meta_keys=arg_struct)
+                                  arg_struct=arg_struct)
     logger.warning('Unsupported type in jsonify: %s (%r)',
                    type_name(obj), obj)
     return obj
@@ -159,9 +159,9 @@ def jsonify(obj: Any,
 @jsonify.register
 def _jsonify_jsonmixin(obj: JSONMixin,
                        camel_case_keys: bool = True,
-                       meta_keys: bool = True) -> JSONType:
+                       arg_struct: bool = True) -> JSONType:
     json = obj.to_json()
-    if meta_keys:
+    if arg_struct:
         json[_MODULE_KEY] = type(obj).__module__
         json[_NAME_KEY] = type(obj).__name__
     return json
@@ -170,7 +170,7 @@ def _jsonify_jsonmixin(obj: JSONMixin,
 @jsonify.register
 def _jsonify_float(obj: float,
                    camel_case_keys: bool = True,
-                   meta_keys: bool = True) -> JSONType:
+                   arg_struct: bool = True) -> JSONType:
     if math.isinf(obj):
         if obj > 0:
             replacement = '+inf'
@@ -180,7 +180,7 @@ def _jsonify_float(obj: float,
         replacement = 'nan'
     else:
         return obj
-    if meta_keys and isinstance(replacement, str):
+    if arg_struct and isinstance(replacement, str):
         return {_MODULE_KEY: float.__module__,
                 _NAME_KEY: float.__name__,
                 'x': replacement}
@@ -191,19 +191,19 @@ def _jsonify_float(obj: float,
 @jsonify.register(tuple)
 def _jsonify_sequence(obj: Sequence[Any],
                       camel_case_keys: bool = True,
-                      meta_keys: bool = True) -> JSONType:
+                      arg_struct: bool = True) -> JSONType:
     return [jsonify(o,
                     camel_case_keys=camel_case_keys,
-                    arg_struct=meta_keys) for o in obj]
+                    arg_struct=arg_struct) for o in obj]
 
 
 @jsonify.register(dict)
 def _jsonify_mapping(obj: Mapping[str, Any],
                      camel_case_keys: bool = True,
-                     meta_keys: bool = True) -> JSONType:
+                     arg_struct: bool = True) -> JSONType:
     _j = functools.partial(jsonify,
                            camel_case_keys=camel_case_keys,
-                           arg_struct=meta_keys)
+                           arg_struct=arg_struct)
     d = {_j(k): _j(v) for k, v in obj.items()}
     if camel_case_keys:
         d = {camel_case(k) if isinstance(k, str) else k: v
@@ -247,9 +247,9 @@ def date_time(year: int,
 @jsonify.register
 def _jsonify_datetime(obj: datetime.datetime,
                       camel_case_keys: bool = True,
-                      meta_keys: bool = True) -> JSONType:
-    if not meta_keys:
-        return obj.strftime('%Y-%m-%dT%H:%M%S.%f%z')
+                      arg_struct: bool = True) -> JSONType:
+    if not arg_struct:
+        return obj.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
     if obj.tzinfo is datetime.timezone.utc:
         obj = obj.replace(tzinfo=pytz.utc)
     if obj.tzinfo is not None and not isinstance(obj.tzinfo, pytz.BaseTzInfo):
@@ -272,8 +272,8 @@ def _jsonify_datetime(obj: datetime.datetime,
 @jsonify.register
 def _jsonify_date(obj: datetime.date,
                   camel_case_keys: bool = True,
-                  meta_keys: bool = True) -> JSONType:
-    if not meta_keys:
+                  arg_struct: bool = True) -> JSONType:
+    if not arg_struct:
         return obj.isoformat()
     return {
         _MODULE_KEY: datetime.date.__module__,
@@ -287,9 +287,9 @@ def _jsonify_date(obj: datetime.date,
 @jsonify.register
 def _jsonify_time(obj: datetime.time,
                   camel_case_keys: bool = True,
-                  meta_keys: bool = True) -> JSONType:
-    if not meta_keys:
-        return obj.strftime('%H:%M%S.%f')
+                  arg_struct: bool = True) -> JSONType:
+    if not arg_struct:
+        return obj.strftime('%H:%M:%S.%f')
     return {
         _MODULE_KEY: datetime.time.__module__,
         _NAME_KEY: datetime.time.__name__,
@@ -303,8 +303,8 @@ def _jsonify_time(obj: datetime.time,
 @jsonify.register
 def _jsonify_enum(obj: Enum,
                   camel_case_keys: bool = True,
-                  meta_keys: bool = True) -> JSONType:
-    if not meta_keys:
+                  arg_struct: bool = True) -> JSONType:
+    if not arg_struct:
         return f'{type_name(obj)}.{obj.name}'
     return {
         _MODULE_KEY: type(obj).__module__,
@@ -312,13 +312,13 @@ def _jsonify_enum(obj: Enum,
         'name': obj.name,
         'value': jsonify(obj.value,
                          camel_case_keys=camel_case_keys,
-                         arg_struct=meta_keys),
+                         arg_struct=arg_struct),
     }
 
 
 def _jsonify_dataclass(obj: dataclasses.dataclass,
                        camel_case_keys: bool = True,
-                       meta_keys: bool = True) -> JSONType:
+                       arg_struct: bool = True) -> JSONType:
     d = {}
     for f in dataclasses.fields(obj):
         if camel_case_keys:
@@ -328,8 +328,8 @@ def _jsonify_dataclass(obj: dataclasses.dataclass,
         v = getattr(obj, f.name)
         d[k] = jsonify(v,
                        camel_case_keys=camel_case_keys,
-                       arg_struct=meta_keys)
-    if meta_keys:
+                       arg_struct=arg_struct)
+    if arg_struct:
         d[_MODULE_KEY] = type(obj).__module__
         d[_NAME_KEY] = type(obj).__name__
     return d

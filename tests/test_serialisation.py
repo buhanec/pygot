@@ -171,7 +171,7 @@ class _CustomTZ(datetime.tzinfo):
         return datetime.timedelta(minutes=self.offset)
 
     def dst(self, _):
-        return 0
+        return None
 
     def __eq__(self, other):
         return isinstance(other, _CustomTZ) and other.offset == self.offset
@@ -373,8 +373,8 @@ _TEST_CASES: Dict[str, List[Any]] = {
     ],
     'datetime-utc': [
         datetime.datetime(2020, 4, 29, 14, 15, 16, 789, pytz.utc),
-        '2020-04-29T14:15:16.000789+00:00',
-        '2020-04-29T14:15:16.000789+00:00',
+        '2020-04-29T14:15:16.000789+0000',
+        '2020-04-29T14:15:16.000789+0000',
         {'$module': serialisation.date_time.__module__,
          '$type': serialisation.date_time.__name__,
          'year': 2020,
@@ -399,8 +399,8 @@ _TEST_CASES: Dict[str, List[Any]] = {
     'datetime-ljubljana': [
         pytz.timezone('Europe/Ljubljana').localize(
             datetime.datetime(2020, 4, 29, 14, 15, 16, 789)),
-        '2020-04-29T14:15:16.000789+02:00',
-        '2020-04-29T14:15:16.000789+02:00',
+        '2020-04-29T14:15:16.000789+0200',
+        '2020-04-29T14:15:16.000789+0200',
         {'$module': serialisation.date_time.__module__,
          '$type': serialisation.date_time.__name__,
          'year': 2020,
@@ -449,8 +449,8 @@ _TEST_CASES: Dict[str, List[Any]] = {
     ],
     'datetime-native-utc': [
         datetime.datetime(2020, 4, 29, 14, 15, 16, 789, datetime.timezone.utc),
-        '2020-04-29T14:15:16.000789+00:00',
-        '2020-04-29T14:15:16.000789+00:00',
+        '2020-04-29T14:15:16.000789+0000',
+        '2020-04-29T14:15:16.000789+0000',
         {'$module': serialisation.date_time.__module__,
          '$type': serialisation.date_time.__name__,
          'year': 2020,
@@ -474,8 +474,8 @@ _TEST_CASES: Dict[str, List[Any]] = {
     ],
     'datetime-native-custom-tz': [
         datetime.datetime(2020, 4, 29, 14, 15, 16, 789, _CustomTZ(+10)),
-        '2020-04-29T14:15:16.000789+00:10',
-        '2020-04-29T14:15:16.000789+00:10',
+        '2020-04-29T14:15:16.000789+0010',
+        '2020-04-29T14:15:16.000789+0010',
         {'$module': serialisation.date_time.__module__,
          '$type': serialisation.date_time.__name__,
          'year': 2020,
