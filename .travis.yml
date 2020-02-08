@@ -3,14 +3,15 @@ language: python
 python:
   - 3.7
   - 3.8
-  - nightly
+  # TODO: Fix orjson/Rust
+  # - nightly
 install:
   - pip install -r requirements.txt
 script:
   - pytest tests
   - pycodestyle pygot tests
   - pydocstyle pygot tests
-  - pylint --rcfile=setup.cfg pygot tests  # TODO: Remove rcfile when Python 2.5.0 released
+  - pylint --rcfile=setup.cfg pygot tests  # TODO: Remove rcfile when pylint 2.5.0 released
 after_success:
   - codecov
   - python-codacy-coverage -r coverage.xml
@@ -35,13 +36,14 @@ jobs:
         - choco install python --version 3.8.1
       env:
         - PATH=/c/Python38:/c/Python38/Scripts:/c/tools/bin:$PATH**
-    - name: 'Python: nightly'
-      language: shell
-      os: windows
-      before_install:
-        - choco install python --pre
-      env:
-        - PATH=/c/Python39:/c/Python39/Scripts:/c/tools/bin:$PATH**
+    # TODO: Fix orjson/Rust
+    # - name: 'Python: nightly'
+    #   language: shell
+    #   os: windows
+    #   before_install:
+    #     - choco install python --pre
+    #   env:
+    #     - PATH=/c/Python39:/c/Python39/Scripts:/c/tools/bin:$PATH**
     - stage: Success notification
       name: Success notification
       language: shell
