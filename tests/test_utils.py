@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 from typing import Any, List, Optional, Union, Type
 
 import pytest
@@ -92,3 +93,49 @@ def test_type_name(obj: Any, expected: str) -> None:
 ], ids=repr)
 def test_type_name_qualname(obj: Any, expected: str) -> None:
     assert utils.type_name(obj, local_name=True) == expected
+
+
+def test_random_ids() -> None:
+    random_ids = set()
+    for _ in range(1000):
+        random_id, random_name = utils.random_id()
+        assert utils.id_to_name(random_id) == random_name
+        assert utils.name_to_id(random_name) == random_id
+        random_ids.add(random_id)
+
+    # Not a measure of uniquness, just to ensure we are not spitting
+    # same ID out all the time
+    assert len(random_ids) > 500
+
+
+def test_good_ids() -> None:
+    names = set()
+    for n in range(1000):
+        names.add(utils.id_to_name(n))
+    assert len(names) == 1000
+
+
+@pytest.mark.parametrize('name, expected_id', [
+    ['good-red-lion', 0],
+    ['shiny-white-manticore', 999],
+    ['big-black-snake', 584],
+])
+def test_good_names(name: str, expected_id: int) -> None:
+    assert utils.name_to_id(name) == expected_id
+
+
+def test_bad_ids() -> None:
+    for n in itertools.chain(range(-100, 0), range(1000, 1100)):
+        with pytest.raises(ValueError):
+            utils.id_to_name(n)
+
+
+@pytest.mark.parametrize('name', [
+    'bad-shiny-lion',
+    'good-red-pink-bat',
+    'fat-moose',
+    'random-words-here',
+])
+def test_bad_name(name: str) -> None:
+    with pytest.raises(ValueError):
+        utils.name_to_id(name)
