@@ -57,7 +57,7 @@ def test_version_valid() -> None:
 
 
 @pytest.mark.parametrize('module', _SRC_MODULES.values(), ids=lambda m: m.name)
-def test_modul_all(module: pkgutil.ModuleInfo) -> None:
+def test_module_all(module: pkgutil.ModuleInfo) -> None:
     imported = importlib.import_module(module.name)
     if not hasattr(imported, '__all__'):
         raise AssertionError(f'{module.name} is missing __all__')
