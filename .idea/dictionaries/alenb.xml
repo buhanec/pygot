@@ -9,8 +9,12 @@
       <w>deserialise</w>
       <w>deserialised</w>
       <w>greyjoy</w>
+      <w>jsonify</w>
+      <w>jsonmixin</w>
       <w>lannister</w>
+      <w>manticore</w>
       <w>martell</w>
+      <w>orjson</w>
       <w>pycodestyle</w>
       <w>pydocstyle</w>
       <w>pylint</w>
@@ -20,8 +24,10 @@
       <w>serialise</w>
       <w>serialised</w>
       <w>stark</w>
+      <w>staticenum</w>
       <w>typecheck</w>
       <w>tyrell</w>
+      <w>unjsonify</w>
       <w>westeros</w>
     </words>
   </dictionary>
