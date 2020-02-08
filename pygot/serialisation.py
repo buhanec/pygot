@@ -11,11 +11,14 @@ from enum import Enum
 import functools
 import importlib
 import logging
+import math
 from string import ascii_letters, digits
-from typing import (Any, Dict, List, Mapping, Sequence, Type, TypeVar,
-                    Union, cast)
+from typing import (Any, Dict, List, Mapping, Optional, Sequence, Type,
+                    TypeVar, Union, cast)
 
+import orjson
 import pytz
+from starlette.responses import JSONResponse
 
 from pygot.utils import type_name
 
@@ -32,6 +35,33 @@ JSON = Dict[str, JSONType]
 
 _MODULE_KEY = '$module'
 _NAME_KEY = '$type'
+
+
+# We have dispatcher functions that may not use all arguments.
+# pylint: disable=unused-argument
+
+
+class JSONMixin:
+    """Dataclass mixin for JSON serialisation and deserialisation."""
+
+    def to_json(self) -> JSON:
+        """
+        Generate serialisable JSON structure.
+
+        :return: Serialisable JSON structure
+        """
+        self_dict = dataclasses.asdict(cast(dataclasses.dataclass, self))
+        return {camel_case(k): v for k, v in self_dict.items()}
+
+    @classmethod
+    def from_json(cls: Type[T], json: JSON) -> T:
+        """
+        Deserialise original dataclass from JSON structure.
+
+        :param json: Serialisable JSON structure
+        :return: Deserialised original dataclass
+        """
+        return cls(**{snake_case(k): v for k, v in json.items()})
 
 
 def snake_case(string: str) -> str:
@@ -102,7 +132,10 @@ def camel_case(string: str) -> str:
     return ''.join(output)
 
 
-def jsonify(obj: Any, camel_case_keys: bool = True) -> JSONType:
+@functools.singledispatch
+def jsonify(obj: Any,
+            camel_case_keys: bool = True,
+            arg_struct: bool = True) -> JSONType:
     """
     "JSON-ify" object.
 
@@ -111,50 +144,195 @@ def jsonify(obj: Any, camel_case_keys: bool = True) -> JSONType:
 
     :param obj: Python object
     :param camel_case_keys: Use camelCase keys
+    :param arg_struct: Provide structure with arguments for re-creation
     :return: "JSON-ified" object
     """
-    _j = functools.partial(jsonify, camel_case_keys=camel_case_keys)
-
-    # If we explicitly have a JSON serialisation, use it
-    if isinstance(obj, JSONMixin):
-        json = obj.to_json()
-        json[_MODULE_KEY] = type(obj).__module__
-        json[_NAME_KEY] = type(obj).__name__
-        return json
-
-    # Return basic types as-is
-    if isinstance(obj, (str, int, float, bool)) or obj is None:
-        return obj
-
-    # Recursively process collections
-    if isinstance(obj, Sequence):
-        return [_j(o) for o in obj]
-    if isinstance(obj, Mapping):
-        d = {_j(k): _j(v) for k, v in obj.items()}
-        if camel_case_keys:
-            d = {camel_case(k) if isinstance(k, str) else k: v
-                 for k, v in d.items()}
-        return d
-
-    # Special datetime constructs
-    if isinstance(obj, datetime.time):
-        return _time_to_json(obj)
-    if isinstance(obj, datetime.datetime):
-        return _datetime_to_json(obj)
-    if isinstance(obj, datetime.date):
-        return _date_to_json(obj)
-
-    # Special enum constructs
-    if isinstance(obj, Enum):
-        return _enum_to_json(obj)
-
-    # Special dataclass constructs
     if dataclasses.is_dataclass(obj):
-        return _dataclass_to_json(obj, camel_case_keys=camel_case_keys)
-
+        return _jsonify_dataclass(obj,
+                                  camel_case_keys=camel_case_keys,
+                                  meta_keys=arg_struct)
     logger.warning('Unsupported type in jsonify: %s (%r)',
                    type_name(obj), obj)
     return obj
+
+
+@jsonify.register
+def _jsonify_jsonmixin(obj: JSONMixin,
+                       camel_case_keys: bool = True,
+                       meta_keys: bool = True) -> JSONType:
+    json = obj.to_json()
+    if meta_keys:
+        json[_MODULE_KEY] = type(obj).__module__
+        json[_NAME_KEY] = type(obj).__name__
+    return json
+
+
+@jsonify.register
+def _jsonify_float(obj: float,
+                   camel_case_keys: bool = True,
+                   meta_keys: bool = True) -> JSONType:
+    if math.isinf(obj):
+        if obj > 0:
+            replacement = '+inf'
+        else:
+            replacement = '-inf'
+    elif math.isnan(obj):
+        replacement = 'nan'
+    else:
+        return obj
+    if meta_keys and isinstance(replacement, str):
+        return {_MODULE_KEY: float.__module__,
+                _NAME_KEY: float.__name__,
+                'x': replacement}
+    return replacement
+
+
+@jsonify.register(list)
+@jsonify.register(tuple)
+def _jsonify_sequence(obj: Sequence[Any],
+                      camel_case_keys: bool = True,
+                      meta_keys: bool = True) -> JSONType:
+    return [jsonify(o,
+                    camel_case_keys=camel_case_keys,
+                    arg_struct=meta_keys) for o in obj]
+
+
+@jsonify.register(dict)
+def _jsonify_mapping(obj: Mapping[str, Any],
+                     camel_case_keys: bool = True,
+                     meta_keys: bool = True) -> JSONType:
+    _j = functools.partial(jsonify,
+                           camel_case_keys=camel_case_keys,
+                           arg_struct=meta_keys)
+    d = {_j(k): _j(v) for k, v in obj.items()}
+    if camel_case_keys:
+        d = {camel_case(k) if isinstance(k, str) else k: v
+             for k, v in d.items()}
+    return d
+
+
+def date_time(year: int,
+              month: int,
+              day: int,
+              hour: int,
+              minute: int,
+              second: int,
+              microsecond: int,
+              timezone: Optional[str]) -> datetime.datetime:
+    """
+    Create `date.datetime` object using meta form.
+
+    :param year: Year
+    :param month: Month
+    :param day: Day
+    :param hour: Hour
+    :param minute: Minute
+    :param second: Second
+    :param microsecond: Microsecond
+    :param timezone: Timezone
+    :return: `datetime.date` instance
+    """
+    dt = datetime.datetime(year=year,
+                           month=month,
+                           day=day,
+                           hour=hour,
+                           minute=minute,
+                           second=second,
+                           microsecond=microsecond)
+    if timezone is None:
+        return dt
+    return pytz.timezone(timezone).localize(dt)
+
+
+@jsonify.register
+def _jsonify_datetime(obj: datetime.datetime,
+                      camel_case_keys: bool = True,
+                      meta_keys: bool = True) -> JSONType:
+    if not meta_keys:
+        return obj.strftime('%Y-%m-%dT%H:%M%S.%f%z')
+    if obj.tzinfo is datetime.timezone.utc:
+        obj = obj.replace(tzinfo=pytz.utc)
+    if obj.tzinfo is not None and not isinstance(obj.tzinfo, pytz.BaseTzInfo):
+        logger.warning('Converting unknown timezone %r to UTC', obj.tzinfo)
+        obj = obj.astimezone(pytz.utc)
+    return {
+        _MODULE_KEY: date_time.__module__,
+        _NAME_KEY: date_time.__name__,
+        'year': obj.year,
+        'month': obj.month,
+        'day': obj.day,
+        'hour': obj.hour,
+        'minute': obj.minute,
+        'second': obj.second,
+        'microsecond': obj.microsecond,
+        'timezone': obj.tzinfo.zone if obj.tzinfo else None,
+    }
+
+
+@jsonify.register
+def _jsonify_date(obj: datetime.date,
+                  camel_case_keys: bool = True,
+                  meta_keys: bool = True) -> JSONType:
+    if not meta_keys:
+        return obj.isoformat()
+    return {
+        _MODULE_KEY: datetime.date.__module__,
+        _NAME_KEY: datetime.date.__name__,
+        'year': obj.year,
+        'month': obj.month,
+        'day': obj.day
+    }
+
+
+@jsonify.register
+def _jsonify_time(obj: datetime.time,
+                  camel_case_keys: bool = True,
+                  meta_keys: bool = True) -> JSONType:
+    if not meta_keys:
+        return obj.strftime('%H:%M%S.%f')
+    return {
+        _MODULE_KEY: datetime.time.__module__,
+        _NAME_KEY: datetime.time.__name__,
+        'hour': obj.hour,
+        'minute': obj.minute,
+        'second': obj.second,
+        'microsecond': obj.microsecond
+    }
+
+
+@jsonify.register
+def _jsonify_enum(obj: Enum,
+                  camel_case_keys: bool = True,
+                  meta_keys: bool = True) -> JSONType:
+    if not meta_keys:
+        return f'{type_name(obj)}.{obj.name}'
+    return {
+        _MODULE_KEY: type(obj).__module__,
+        _NAME_KEY: type(obj).__name__,
+        'name': obj.name,
+        'value': jsonify(obj.value,
+                         camel_case_keys=camel_case_keys,
+                         arg_struct=meta_keys),
+    }
+
+
+def _jsonify_dataclass(obj: dataclasses.dataclass,
+                       camel_case_keys: bool = True,
+                       meta_keys: bool = True) -> JSONType:
+    d = {}
+    for f in dataclasses.fields(obj):
+        if camel_case_keys:
+            k = camel_case(f.name)
+        else:
+            k = f.name
+        v = getattr(obj, f.name)
+        d[k] = jsonify(v,
+                       camel_case_keys=camel_case_keys,
+                       arg_struct=meta_keys)
+    if meta_keys:
+        d[_MODULE_KEY] = type(obj).__module__
+        d[_NAME_KEY] = type(obj).__name__
+    return d
 
 
 def unjsonify(json: JSONType, camel_case_keys: bool = True) -> Any:
@@ -203,6 +381,10 @@ def unjsonify(json: JSONType, camel_case_keys: bool = True) -> Any:
         if isinstance(cls, type) and issubclass(cls, Enum):
             return getattr(cls, mapping['name'])
 
+        # Float takes no keyword args
+        if cls is float:
+            return float(mapping['x'])
+
         # Otherwise use as kwargs
         try:
             if camel_case_keys:
@@ -217,105 +399,12 @@ def unjsonify(json: JSONType, camel_case_keys: bool = True) -> Any:
     return json
 
 
-def _date_to_json(date: datetime.date) -> JSON:
-    return {
-        _MODULE_KEY: datetime.date.__module__,
-        _NAME_KEY: datetime.date.__name__,
-        'year': date.year,
-        'month': date.month,
-        'day': date.day
-    }
-
-
-def _time_to_json(time: datetime.time) -> JSON:
-    return {
-        _MODULE_KEY: datetime.time.__module__,
-        _NAME_KEY: datetime.time.__name__,
-        'hour': time.hour,
-        'minute': time.minute,
-        'second': time.second,
-        'microsecond': time.microsecond
-    }
-
-
-def _timezone_to_json(zone: datetime.tzinfo) -> JSON:
-    if zone is datetime.timezone.utc:
-        zone = pytz.utc
-    if not isinstance(zone, pytz.BaseTzInfo):
-        raise ValueError('Cannot serialise non-pytz timezones')
-    return {
-        _MODULE_KEY: pytz.timezone.__module__,
-        _NAME_KEY: pytz.timezone.__name__,
-        'zone': zone.zone
-    }
-
-
-def _enum_to_json(enum: Enum) -> JSON:
-    return {
-        _MODULE_KEY: type(enum).__module__,
-        _NAME_KEY: type(enum).__name__,
-        'name': enum.name
-    }
-
-
-def _datetime_to_json(dt: datetime.datetime) -> JSON:
-    if dt.tzinfo is None:
-        tz = None
-    else:
-        try:
-            tz = _timezone_to_json(dt.tzinfo)
-        except ValueError:
-            logger.warning('Converting unknown timezone %r to UTC', dt.tzinfo)
-            dt = dt.astimezone(pytz.utc)
-            tz = _timezone_to_json(dt.tzinfo)
-    return {
-        _MODULE_KEY: datetime.datetime.__module__,
-        _NAME_KEY: datetime.datetime.__name__,
-        'year': dt.year,
-        'month': dt.month,
-        'day': dt.day,
-        'hour': dt.hour,
-        'minute': dt.minute,
-        'second': dt.second,
-        'microsecond': dt.microsecond,
-        'tzinfo': tz
-    }
-
-
-def _dataclass_to_json(dataclass: dataclasses.dataclass,
-                       camel_case_keys: bool = True) -> JSON:
-    json = {camel_case(k) if camel_case_keys else k: jsonify(v)
-            for k, v in dataclasses.asdict(dataclass).items()}
-    json[_MODULE_KEY] = type(dataclass).__module__
-    json[_NAME_KEY] = type(dataclass).__name__
-    return json
-
-
-class JSONMixin:
-    """Dataclass mixin for JSON serialisation and deserialisation."""
-
-    def to_json(self) -> JSON:
-        """
-        Generate serialisable JSON structure.
-
-        :return: Serialisable JSON structure
-        """
-        self_dict = dataclasses.asdict(cast(dataclasses.dataclass, self))
-        return {camel_case(k): v for k, v in self_dict.items()}
-
-    @classmethod
-    def from_json(cls: Type[T], json: JSON) -> T:
-        """
-        Deserialise original dataclass from JSON structure.
-
-        :param json: Serialisable JSON structure
-        :return: Deserialised original dataclass
-        """
-        return cls(**{snake_case(k): v for k, v in json.items()})
-
-
 class ReplaceMixin:
-    """Allows for immutable instance creation using replacement values."""
+    """
+    Allows for immutable instance creation using replacement values.
+
+    TODO: Why is this here?
+    """
 
     def replace(self: T, **kwargs: Any) -> T:
         """
@@ -327,3 +416,12 @@ class ReplaceMixin:
         new_kwargs = dataclasses.asdict(self)
         new_kwargs.update(kwargs)
         return type(self)(**new_kwargs)
+
+
+class ORJSONResponse(JSONResponse):
+    """JSON response using orjson and serialisation."""
+
+    media_type = 'application/json'
+
+    def render(self, content: Any) -> bytes:
+        return orjson.dumps(jsonify(content))
