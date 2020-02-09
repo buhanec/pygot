@@ -44,6 +44,12 @@ class StaticTypeConflict(TypeError):
     """Thrown when static names conflict."""
 
     def __init__(self, name: str, existing_class: Type[Any]) -> None:
+        """
+        Initialise error with debugging information.
+
+        :param name: Clashing name
+        :param existing_class:  Existing class
+        """
         self.name = name
         self.existing_class = existing_class
         super().__init__(f'Could not create {name!r}, name in use')
@@ -53,6 +59,12 @@ class StaticInstanceConflict(TypeError):
     """Thrown when static instance names conflict."""
 
     def __init__(self, name: str, existing_class: Type[Any]) -> None:
+        """
+        Initialise error with debugging information.
+
+        :param name: Clashing name
+        :param existing_class:  Existing class
+        """
         self.name = f'{type(existing_class).__name__}.{name}'
         self.existing_class = existing_class
         super().__init__(f'Could not create {name!r}, name in use')
@@ -62,6 +74,12 @@ class ExpectedStaticAttr(AttributeError):
     """Thrown when static definition is missing an expected attribute."""
 
     def __init__(self, name: str, attrs: Iterable[str]) -> None:
+        """
+        Initialise error with debugging information.
+
+        :param name: Class name
+        :param attrs:  Missing attributes
+        """
         self.name = name
         self.attrs = attrs
         super().__init__(f'Could not create {name!r}, expected attr '
@@ -72,6 +90,12 @@ class UnexpectedStaticAttr(AttributeError):
     """Thrown when static definition has an unexpected attribute."""
 
     def __init__(self, name: str, attrs: Iterable[str]) -> None:
+        """
+        Initialise error with debugging information.
+
+        :param name: Class name
+        :param attrs:  Unexpected attributes
+        """
         self.name = name
         self.attrs = attrs
         super().__init__(f'Could not create {name!r}, unexpected attr '
@@ -246,6 +270,14 @@ class StaticData(_Registry, metaclass=Registry):
                  bases: Tuple[Type[Any]] = tuple(),
                  class_dict: Optional[Dict[str, Any]] = None,
                  **kwargs) -> None:
+        """
+        Capture and correctly assemble class dict for programmatic instances.
+
+        :param name: Class name
+        :param bases: Class bases
+        :param class_dict: Class dict
+        :param kwargs: Class dict as kwargs
+        """
         if class_dict is None:
             class_dict = kwargs
         else:
