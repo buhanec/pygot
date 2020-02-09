@@ -281,8 +281,9 @@ def _jsonify_static_data(obj: StaticData,
     d = serialisation.jsonify(d,
                               camel_case_keys=camel_case_keys,
                               arg_struct=arg_struct)
-    d[serialisation.MODULE_KEY] = type(obj).__module__
-    d[serialisation.NAME_KEY] = type(obj).__name__
+    if arg_struct:
+        d[serialisation.MODULE_KEY] = type(obj).__module__
+        d[serialisation.NAME_KEY] = type(obj).__name__
     return d
 
 

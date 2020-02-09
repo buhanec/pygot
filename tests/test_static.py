@@ -4,10 +4,13 @@ from __future__ import annotations
 
 __all__ = tuple()
 
+import dataclasses
+from typing import Dict
+
 from _pytest.fixtures import FixtureRequest
 import pytest
 
-from pygot import static
+from pygot import serialisation, static
 
 
 # Fixtures. Need to make a PR for this.
@@ -18,7 +21,7 @@ from pygot import static
 
 
 @pytest.fixture(scope='function')
-def reset_registry(request: FixtureRequest):
+def reset_registry(request: FixtureRequest) -> None:
     """Ensure everything has a clean registry."""
     reset = {}
     for name in dir(static):
@@ -33,7 +36,7 @@ def reset_registry(request: FixtureRequest):
     request.addfinalizer(_fin)
 
 
-def test_static_type_name_conflict(reset_registry):
+def test_static_type_name_conflict(reset_registry) -> None:
     # noinspection PyUnusedLocal
     class Name123(static.StaticData):
         """Test class."""
@@ -55,7 +58,7 @@ def test_static_type_name_conflict(reset_registry):
             """Test class."""
 
 
-def test_static_type_instance_conflict(reset_registry):
+def test_static_type_instance_conflict(reset_registry) -> None:
     class Name123(static.StaticData):
         """Test class."""
 
@@ -80,7 +83,7 @@ def test_static_type_instance_conflict(reset_registry):
             """Test class."""
 
 
-def test_attr_scopes(reset_registry):
+def test_attr_scopes(reset_registry) -> None:
     class Name123(static.StaticData):
         """Test class."""
 
@@ -113,7 +116,7 @@ def test_attr_scopes(reset_registry):
             c = 3
 
 
-def test_bad_type_does_not_register(reset_registry):
+def test_bad_type_does_not_register(reset_registry) -> None:
     class Name123(static.StaticData):
         """Test class."""
 
@@ -133,7 +136,7 @@ def test_bad_type_does_not_register(reset_registry):
     assert len(Name123) == 0
 
 
-def test_good_type_registers(reset_registry):
+def test_good_type_registers(reset_registry) -> None:
     class Name123(static.StaticData):
         """Test class."""
 
@@ -150,7 +153,7 @@ def test_good_type_registers(reset_registry):
 
 
 # noinspection SpellCheckingInspection
-def test_type_registry(reset_registry):
+def test_type_registry(reset_registry) -> None:
     # noinspection PyTypeChecker
     initial_len = len(static.StaticData)
 
@@ -197,7 +200,7 @@ def test_type_registry(reset_registry):
 
 
 # noinspection SpellCheckingInspection
-def test_instance_registry(reset_registry):
+def test_instance_registry(reset_registry) -> None:
     class Name123(static.StaticData):
         """Test class."""
 
@@ -252,7 +255,7 @@ def test_instance_registry(reset_registry):
     assert GoodGirl.__name__ in dir(Name123)
 
 
-def test_type_and_instance_metadata(reset_registry):
+def test_type_and_instance_metadata(reset_registry) -> None:
     class Name123(static.StaticData):
         """
         Test class.
@@ -302,3 +305,517 @@ Or maybe it can be handled."""
     assert Boring.info == 'So boring it can barely get a summary.'
     assert Indescribable.name == Indescribable.__name__
     assert Indescribable.info == 'Indescribable()'
+
+
+def test_dynamic_instance_creation(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        a: int = static.STATIC
+        b: int
+
+    new_instance = Name123('NewType', a=1)
+
+    assert new_instance.__name__ == 'NewType'
+    assert new_instance.__module__ == static.__name__
+    assert new_instance.a == 1
+    assert isinstance(new_instance, Name123)
+    assert new_instance in Name123
+    assert new_instance is Name123.NewType
+
+
+def test_dynamic_instance_fetching(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        a: int = static.STATIC
+        b: int
+
+    class NewType(metaclass=Name123):
+        """Test class."""
+
+        a = 1
+
+    new_instance = Name123('NewType', a=1)
+
+    assert new_instance is NewType
+
+
+def test_dynamic_instance_mismatch_raises(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        a: int = static.STATIC
+        b: int
+
+    Name123('NewType', a=1)
+
+    with pytest.raises(static.StaticInstanceConflict):
+        Name123('NewType', a=2)
+
+
+def test_dynamic_instance_doc(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        a: int = static.STATIC
+        b: int
+
+    doc = """A summary.
+
+    And some more details."""
+
+    Name123('NewType', a=1, __doc__=doc)
+
+    assert Name123.NewType.__doc__ == doc
+
+
+def test_instance_instantiation_as_dataclass(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        a: int = static.STATIC
+        b: int
+        c: str
+
+    class GoodBoy(metaclass=Name123):
+        """Test class."""
+
+        a = 1
+        b: int
+        c: str
+
+    # noinspection PyArgumentList
+    doggo = GoodBoy(b=2, c='doggo')
+    # noinspection PyArgumentList
+    wolfo = GoodBoy(b=3, c='wolfo')
+
+    assert dataclasses.is_dataclass(GoodBoy)
+    assert dataclasses.is_dataclass(doggo)
+    assert dataclasses.is_dataclass(wolfo)
+
+
+def test_superfluous_dataclass_annotation(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        a: int = static.STATIC
+        b: int
+        c: str
+
+    @dataclasses.dataclass
+    class GoodBoy(metaclass=Name123):
+        """Test class."""
+
+        a = 1
+        b: int
+        c: str
+
+    doggo = GoodBoy(b=2, c='doggo')
+    wolfo = GoodBoy(b=3, c='wolfo')
+
+    assert dataclasses.is_dataclass(GoodBoy)
+    assert dataclasses.is_dataclass(doggo)
+    assert dataclasses.is_dataclass(wolfo)
+
+
+def test_frozen_type_attributes(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        a: int = static.STATIC
+        b: int
+        c: str
+
+    @dataclasses.dataclass
+    class GoodBoy(metaclass=Name123):
+        """Test class."""
+
+        a = 1
+        b: int
+        c: str
+
+    doggo = GoodBoy(b=2, c='doggo')
+
+    assert doggo.a == 1
+    assert doggo.b == 2
+    assert doggo.c == 'doggo'
+
+    with pytest.raises(AttributeError):
+        doggo.a = 10
+    doggo.b = 20
+    doggo.c = 'DOGGO'
+
+    assert doggo.a == 1
+    assert doggo.b == 20
+    assert doggo.c == 'DOGGO'
+
+
+def test_private_properties_remain_private(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        __actual_species__: str
+        _super_secret: str = 'never let anyone know'
+
+        a: int = static.STATIC
+        b: int
+        c: str
+
+    class GoodBoy(metaclass=Name123):
+        """Test class."""
+
+        __species__ = 'WolfoInDogClothes'
+        __annotation_test__: int
+
+        _private_key: str = 'hello world'
+
+        a = 1
+        b: int
+        c: str
+
+    # noinspection PyArgumentList
+    doggo = GoodBoy(b=2, c='doggo')
+
+    assert doggo.a == 1
+    assert doggo.b == 2
+    assert doggo.c == 'doggo'
+
+    assert doggo.__species__ is GoodBoy.__species__
+    assert not hasattr(doggo, '__annotation_test__')
+    assert not hasattr(doggo, '__actual_species__')
+    assert not hasattr(doggo, '_super_secret')
+    # pylint: disable=protected-access
+    assert doggo._private_key is GoodBoy._private_key
+
+
+def test_private_dataclass_properties_remain_private(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        a: int = static.STATIC
+        b: int
+        c: str
+
+    @dataclasses.dataclass
+    class GoodBoy(metaclass=Name123):
+        """Test class."""
+
+        __species__ = 'WolfoInDogClothes'
+        __annotation_test__: int
+
+        a = 1
+        b: int
+        c: str
+
+        _private_key: str = 'hello world'
+
+    # noinspection PyArgumentList
+    doggo = GoodBoy(b=2, c='doggo')
+
+    assert doggo.a == 1
+    assert doggo.b == 2
+    assert doggo.c == 'doggo'
+
+    assert doggo.__species__ is GoodBoy.__species__
+    assert not hasattr(doggo, '__annotation_test__')
+    # pylint: disable=protected-access
+    assert doggo._private_key is GoodBoy._private_key
+
+
+def test_dynamic_instance_private_properties(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        a: int = static.STATIC
+        b: int
+        c: str
+
+    Name123('GoodBoy',
+            a=1,
+            __species__='WolfoInDogClothes',
+            _private_key='hello world',
+            __annotations__={'__annotation_test__': 'int',
+                             '_private_key': 'str',
+                             'b': 'int',
+                             'c': 'str'})
+
+    # noinspection PyArgumentList
+    doggo = Name123.GoodBoy(b=2, c='doggo')
+
+    assert doggo.a == 1
+    assert doggo.b == 2
+    assert doggo.c == 'doggo'
+
+    assert doggo.__species__ is Name123.GoodBoy.__species__
+    assert not hasattr(doggo, '__annotation_test__')
+    # pylint: disable=protected-access
+    assert doggo._private_key is Name123.GoodBoy._private_key
+
+
+def test_instance_instance_serialisation(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        a: int = static.STATIC
+        b: int
+        c: Dict[str, int]
+
+    @dataclasses.dataclass
+    class GoodBoy(metaclass=Name123):
+        """Test class."""
+
+        __species__ = 'WolfoInDogClothes'
+
+        a = 1
+        b: int
+        c: Dict[str, int]
+
+    doggo = GoodBoy(b=2, c={
+        'age_in_dog_years': 100,
+    })
+
+    assert serialisation.jsonify(doggo) == {'$module': GoodBoy.__module__,
+                                            '$type': GoodBoy.__name__,
+                                            'b': 2,
+                                            'c': {'ageInDogYears': 100}}
+    assert serialisation.jsonify(
+        doggo,
+        camel_case_keys=True,
+        arg_struct=True) == {'$module': GoodBoy.__module__,
+                             '$type': GoodBoy.__name__,
+                             'b': 2,
+                             'c': {'ageInDogYears': 100}}
+    assert serialisation.jsonify(
+        doggo,
+        camel_case_keys=False,
+        arg_struct=True) == {'$module': GoodBoy.__module__,
+                             '$type': GoodBoy.__name__,
+                             'b': 2,
+                             'c': {'age_in_dog_years': 100}
+                             }
+    assert serialisation.jsonify(
+        doggo,
+        camel_case_keys=True,
+        arg_struct=False) == {'b': 2,
+                              'c': {'ageInDogYears': 100}}
+
+    assert serialisation.jsonify(
+        doggo,
+        camel_case_keys=False,
+        arg_struct=False) == {'b': 2,
+                              'c': {'age_in_dog_years': 100}}
+
+
+def test_instance_instance_deserialisation(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        a: int = static.STATIC
+        b: int
+        c: Dict[str, int]
+
+    @dataclasses.dataclass
+    class GoodBoy(metaclass=Name123):
+        """Test class."""
+
+        __species__ = 'WolfoInDogClothes'
+
+        a = 1
+        b: int
+        c: Dict[str, int]
+
+    doggo = GoodBoy(b=2, c={
+        'age_in_dog_years': 100,
+    })
+
+    assert 'GoodBoy' not in globals()
+
+    globals()['GoodBoy'] = GoodBoy
+
+    try:
+        one = serialisation.unjsonify({'$module': GoodBoy.__module__,
+                                       '$type': GoodBoy.__name__,
+                                       'b': 2,
+                                       'c': {'ageInDogYears': 100}})
+        assert one == doggo
+        assert one is not doggo
+
+        two = serialisation.unjsonify({'$module': GoodBoy.__module__,
+                                       '$type': GoodBoy.__name__,
+                                       'b': 2,
+                                       'c': {'ageInDogYears': 100}},
+                                      camel_case_keys=True)
+        assert two == doggo
+        assert two is not doggo
+
+        three = serialisation.unjsonify({'$module': GoodBoy.__module__,
+                                         '$type': GoodBoy.__name__,
+                                         'b': 2,
+                                         'c': {'age_in_dog_years': 100}},
+                                        camel_case_keys=False)
+        assert three == doggo
+        assert three is not doggo
+    finally:
+        del globals()['GoodBoy']
+
+
+def test_instance_serialisation(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        b: int = static.STATIC
+
+    class GoodBoy(metaclass=Name123):
+        """Test class."""
+
+        __species__ = 'WolfoInDogClothes'
+
+        b = 2
+        c: Dict[str, int] = {'age_in_dog_years': 100}
+
+    class BadBoy(metaclass=Name123):
+        """He's a bad boy."""
+
+        surname = 'Eilish'
+        b = 2
+        c: int
+        d: str
+
+    # GoodBoy
+    assert serialisation.jsonify(GoodBoy) == {
+        '$module': Name123.__module__,
+        '$type': Name123.__name__,
+        'name': 'GoodBoy',
+        'b': 2,
+        'c': {'ageInDogYears': 100}
+    }
+    assert serialisation.jsonify(
+        GoodBoy,
+        camel_case_keys=True,
+        arg_struct=True) == {'$module': Name123.__module__,
+                             '$type': Name123.__name__,
+                             'name': 'GoodBoy',
+                             'b': 2,
+                             'c': {'ageInDogYears': 100}}
+    assert serialisation.jsonify(
+        GoodBoy,
+        camel_case_keys=False,
+        arg_struct=True) == {'$module': Name123.__module__,
+                             '$type': Name123.__name__,
+                             'name': 'GoodBoy',
+                             'b': 2,
+                             'c': {'age_in_dog_years': 100}}
+    assert serialisation.jsonify(
+        GoodBoy,
+        camel_case_keys=True,
+        arg_struct=False) == {'name': 'GoodBoy',
+                              'b': 2,
+                              'c': {'ageInDogYears': 100}}
+
+    assert serialisation.jsonify(
+        GoodBoy,
+        camel_case_keys=False,
+        arg_struct=False) == {'name': 'GoodBoy',
+                              'b': 2,
+                              'c': {'age_in_dog_years': 100}}
+
+    # BadBoy
+    assert serialisation.jsonify(BadBoy) == {'$module': Name123.__module__,
+                                             '$type': Name123.__name__,
+                                             'name': 'BadBoy',
+                                             'b': 2,
+                                             'surname': 'Eilish'}
+    assert serialisation.jsonify(
+        BadBoy,
+        camel_case_keys=True,
+        arg_struct=True) == {'$module': Name123.__module__,
+                             '$type': Name123.__name__,
+                             'name': 'BadBoy',
+                             'b': 2,
+                             'surname': 'Eilish'}
+    assert serialisation.jsonify(
+        BadBoy,
+        camel_case_keys=False,
+        arg_struct=True) == {'$module': Name123.__module__,
+                             '$type': Name123.__name__,
+                             'name': 'BadBoy',
+                             'b': 2,
+                             'surname': 'Eilish'}
+    assert serialisation.jsonify(
+        BadBoy,
+        camel_case_keys=True,
+        arg_struct=False) == {'name': 'BadBoy',
+                              'b': 2,
+                              'surname': 'Eilish'}
+
+    assert serialisation.jsonify(
+        BadBoy,
+        camel_case_keys=False,
+        arg_struct=False) == {'name': 'BadBoy',
+                              'b': 2,
+                              'surname': 'Eilish'}
+
+
+def test_instance_deserialisation(reset_registry) -> None:
+    class Name123(static.StaticData):
+        """Test class."""
+
+        b: int = static.STATIC
+        c: Dict[str, int] = static.STATIC
+
+    assert 'Name123' not in globals()
+
+    globals()['Name123'] = Name123
+
+    try:
+        class GoodBoy(metaclass=Name123):
+            """He's a good boy."""
+
+            b = 2
+            c = {'age_in_dog_years': 100}
+
+        one = serialisation.unjsonify({
+            '$module': Name123.__module__,
+            '$type': Name123.__name__,
+            'name': 'GoodBoy',
+            'b': 2,
+            'c': {'ageInDogYears': 100}
+        })
+        two = serialisation.unjsonify({
+            '$module': Name123.__module__,
+            '$type': Name123.__name__,
+            'name': 'GoodBoy',
+            'b': 2,
+            'c': {'ageInDogYears': 100}
+        }, camel_case_keys=True)
+        three = serialisation.unjsonify({
+            '$module': Name123.__module__,
+            '$type': Name123.__name__,
+            'name': 'GoodBoy',
+            'b': 2,
+            'c': {'age_in_dog_years': 100}
+        }, camel_case_keys=False)
+
+        fresh = serialisation.unjsonify({
+            '$module': Name123.__module__,
+            '$type': Name123.__name__,
+            'name': 'FreshBoy',
+            'b': 3,
+            'c': {'ageInDogYears': 10}
+        })
+
+        assert one in GoodBoy
+        assert two is GoodBoy
+        assert three is GoodBoy
+
+        assert fresh.__name__ == 'FreshBoy'
+        assert fresh.__module__ == static.__name__
+        assert isinstance(fresh, Name123)
+        assert fresh in Name123
+        assert fresh is not GoodBoy
+        assert fresh is Name123.FreshBoy
+        assert fresh.b == 3
+        assert fresh.c == {'age_in_dog_years': 10}
+    finally:
+        del globals()['Name123']
