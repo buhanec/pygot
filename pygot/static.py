@@ -1,195 +1,416 @@
-"""Static models that represent game data."""
+"""
+Static models that represent game data.
+
+Is it necessary? No. Is it fun? Yes.
+
+The high-level goal is to create partially fixed data containers, where
+some data is preset and immutable, while some data is required to be set
+on instantiation and can be mutated.
+
+For convenience the root `StaticData` is a registry of all partially
+fixed data container types, while in turn those fixed data container
+types are registries of the partially fixed data containers.
+
+These partially fixed data containers can be instantiated as dataclasses
+that span the mutable properties.
+"""
 
 from __future__ import annotations
 
-__all__ = ('Flavour', 'House', 'StaticEnum', 'StaticInformation',
-           'Terrain', 'Unit', 'UnitState')
+__all__ = ('ExpectedStaticAttr', 'Flavour', 'House', 'Registry',
+           'StaticData', 'StaticInstanceConflict',
+           'StaticTypeConflict', 'Terrain', 'UnexpectedStaticAttr',
+           'Unit', 'UnitState', 'Vanilla')
 
 import dataclasses
-from enum import Enum, EnumMeta
-from typing import Any, Dict, Optional, Set, Tuple, Type
+import datetime
+from enum import Enum
+import functools
+import logging
+import textwrap
+from typing import (Any, Dict, Iterable, Iterator, List, Optional,
+                    Tuple, Type, TypeVar)
+
+from pygot import utils, serialisation
+
+logger = logging.getLogger(__name__)
 
 
-class StaticNameConflict(RuntimeError):
+# This place contains a lot of dataclasses and meta-magic...
+# pylint: disable=too-few-public-methods
+
+
+class StaticTypeConflict(TypeError):
     """Thrown when static names conflict."""
 
-    def __init__(self, name, existing_enum):
+    def __init__(self, name: str, existing_class: Type[Any]) -> None:
         self.name = name
-        self.existing_enum = existing_enum
+        self.existing_class = existing_class
         super().__init__(f'Could not create {name!r}, name in use')
 
 
-class StaticMeta(EnumMeta):
-    """
-    Metaclass for static data enums.
+class StaticInstanceConflict(TypeError):
+    """Thrown when static instance names conflict."""
 
-    Tries to ensure that there are uniquely named classes in existence,
-    which can be easily accessed through case insensitive references.
-    """
-
-    __root__: Optional[StaticMeta] = None
-    __registry__: Dict[str, StaticMeta] = {}
-
-    def __new__(mcs,
-                cls: str,
-                bases: Tuple[Type[object]],
-                class_dict: Dict[str, Any]) -> StaticMeta:
-        # Walrus is sad :'=
-        if cls.lower() in mcs.__registry__:
-            raise StaticNameConflict(cls, mcs.__registry__[cls.lower()])
-
-        if mcs.__root__ is not None and mcs.__root__ not in bases:
-            raise TypeError(f'Must subclass {mcs.__root__.__name__}')
-
-        new = super().__new__(mcs, cls, bases, class_dict)
-
-        if mcs.__root__ is None:
-            mcs.__root__ = new
-        else:
-            mcs.__registry__[cls.lower()] = new
-        return new
-
-    @classmethod
-    def get(mcs, name: str) -> StaticMeta:
-        """
-        Find a `StaticEnum` that matches the given name.
-
-        This will not find an instance of `StaticEnum`, but rather the
-        `Enum` class itself.
-
-        :param name: `StaticEnum` case-insensitive class name
-        :return: `StaticEnum` class
-        """
-        if name.lower() not in mcs.__registry__:
-            raise ValueError(f'Could not find {name!r}')
-        return mcs.__registry__[name.lower()]
-
-    @classmethod
-    def all_enums(mcs) -> Set[StaticMeta]:
-        """
-        Find all registered subclasses of `StaticEnum`.
-
-        :return: All registered subclasses of `StaticEnum`
-        """
-        return set(mcs.__registry__.values())
+    def __init__(self, name: str, existing_class: Type[Any]) -> None:
+        self.name = f'{type(existing_class).__name__}.{name}'
+        self.existing_class = existing_class
+        super().__init__(f'Could not create {name!r}, name in use')
 
 
-class StaticEnum(Enum, metaclass=StaticMeta):
-    """
-    Static data enum parent.
+class ExpectedStaticAttr(AttributeError):
+    """Thrown when static definition is missing an expected attribute."""
 
-    Enum values should resolve to `StaticInformation` instances with
-    names that match the enum names.
-    """
+    def __init__(self, name: str, attrs: Iterable[str]) -> None:
+        self.name = name
+        self.attrs = attrs
+        super().__init__(f'Could not create {name!r}, expected attr '
+                         f'{", ".join(map(repr, attrs))}')
+
+
+class UnexpectedStaticAttr(AttributeError):
+    """Thrown when static definition has an unexpected attribute."""
+
+    def __init__(self, name: str, attrs: Iterable[str]) -> None:
+        self.name = name
+        self.attrs = attrs
+        super().__init__(f'Could not create {name!r}, unexpected attr '
+                         f'{", ".join(map(repr, attrs))}')
+
+
+STATIC = type('STATIC', tuple(), {})
+
+T = TypeVar('T')
+
+
+class _Registry(type):
+    """Mixin to provide information on data containers."""
 
     @property
-    def info(self) -> StaticInformation:
+    def name(cls) -> str:
         """
-        Return static information about enum.
+        Get data container name.
 
-        :return: Static information about enum
+        :return: Data container name
         """
-        return self.value
+        return cls.__name__
+
+    @property
+    def info(cls) -> str:
+        """
+        Get data container info.
+
+        :return: Data container info
+        """
+        desc = cls.__doc__.lstrip().split('\n', maxsplit=1)[-1]
+        desc = textwrap.dedent(desc).strip()
+        return desc
+
+    def __getattr__(cls, name: str) -> Any:
+        if name.lower() not in cls.__registry__:
+            raise AttributeError(name)
+        return cls.__registry__[name.lower()]
+
+    def __len__(cls) -> int:
+        return len(cls.__registry__)
+
+    def __iter__(cls) -> Iterator[Any]:
+        for x in cls.__registry__.values():
+            yield x
+
+    def __contains__(cls, x: object) -> bool:
+        if isinstance(x, str):
+            return x.lower() in cls.__registry__
+        return x in cls.__registry__.values()
 
 
-@dataclasses.dataclass(frozen=True)
-class StaticInformation:
-    """
-    Static data parent.
+class Registry(_Registry):
+    """Metaclass that does registry setup."""
 
-    `StaticEnum` values should resolve to instances of this class with
-    names that match the enum names.
-    """
+    def __new__(mcs,
+                name: str,
+                bases: Tuple[Type[Any]],
+                class_dict: Dict[str, Any]) -> Registry:
+        """
+        Attach a new registry to class during class creation.
 
-    name: str
+        :param name: Class name
+        :param bases: Class bases
+        :param class_dict: Class dict
+        """
+        new = super().__new__(mcs, name, bases, class_dict)
+        new.__registry__ = {}
+        if not hasattr(new, '__annotations__'):
+            new.__annotations__ = {}
+        return new
+
+    def register(cls, instance):
+        """
+        Register an instance with the registry.
+
+        :param instance: Instance to register
+        """
+        cls.__registry__[instance.__name__.lower()] = instance
+
+    def __dir__(cls) -> Iterable[str]:
+        default_dir = list(super().__dir__())
+        registry_dir = [c.__name__ for c in cls.__registry__.values()]
+        return default_dir + registry_dir
 
 
-@dataclasses.dataclass(frozen=True)
-class _Terrain(StaticInformation):
-    """Terrain."""
+class StaticData(_Registry, metaclass=Registry):
+    """Metaclass keeping track of all static data classes and instances."""
+
+    def __new__(mcs,
+                name: str,
+                bases: Tuple[Type[Any]] = tuple(),
+                class_dict: Optional[Dict[str, Any]] = None,
+                **kwargs) -> StaticData:
+        """
+        Create a new partially fixed static data container.
+
+        :param name: Container name
+        :param bases: Container bases
+        :param class_dict: Container class dict
+        :param kwargs: Kwargs for container class, if dynamically generated
+        """
+        if class_dict is None:
+            class_dict = kwargs
+            logger.info('Programmatically creating %r as instance of %s...',
+                        name, utils.type_name(mcs))
+        else:
+            class_dict.update(kwargs)
+            logger.info('Creating %r as instance of %s...',
+                        name, utils.type_name(mcs))
+        # Check for existing name
+        if name in mcs:
+            existing = getattr(mcs, name)
+            existing_class_dict = {k: getattr(existing, k) #
+                                   for k in existing.__static_fields__}
+            if class_dict == existing_class_dict:
+                return existing
+            raise StaticInstanceConflict(name, existing)
+
+        # Sort out attributes
+        static_attrs = {}
+        dynamic_attrs = {}
+        for attr, hint in mcs.__annotations__.items():
+            if attr.startswith('_'):
+                continue
+            if getattr(mcs, attr, None) is STATIC:
+                static_attrs[attr] = hint
+            else:
+                dynamic_attrs[attr] = hint
+
+        # Check for missing and unexpected attrs
+        missing = static_attrs.keys() - class_dict.keys()
+        if missing:
+            raise ExpectedStaticAttr(name, missing)
+        unexpected = class_dict.keys() & dynamic_attrs
+        if unexpected:
+            raise UnexpectedStaticAttr(name, unexpected)
+
+        # Extend static attrs with additional class_dict values
+        full_static = static_attrs.keys() | {k for k in class_dict.keys()
+                                             if k not in dynamic_attrs
+                                             and not k.startswith('_')}
+
+        # Instantiate object
+        new = super().__new__(mcs, name, bases, class_dict)
+
+        # Create setattr to block frozen attrs from being overridden
+        @functools.wraps(new.__setattr__)
+        def _setattr(self_: StaticData, name_: str, value_: Any) -> None:
+            if name_ in self_.__static_fields__:
+                raise AttributeError(f'Frozen attribute: {name_!r}')
+            object.__setattr__(self_, name_, value_)
+
+        # Create half-frozen dataclass
+        new.__annotations__ = dynamic_attrs
+        new.__static_fields__ = full_static
+        new.__setattr__ = _setattr
+        new = dataclasses.dataclass(new)
+
+        # Register instance
+        mcs.register(new)
+        logger.info('%s registered with %s',
+                    utils.type_name(new), utils.type_name(mcs))
+
+        return new
+
+    def __init__(cls,
+                 name: str,
+                 bases: Tuple[Type[Any]] = tuple(),
+                 class_dict: Optional[Dict[str, Any]] = None,
+                 **kwargs) -> None:
+        if class_dict is None:
+            class_dict = kwargs
+        else:
+            class_dict.update(kwargs)
+        super().__init__(name, bases, class_dict)
+
+    def __init_subclass__(mcs, **kwargs: Any) -> None:
+        # We are just going to hijack the children registry for
+        # subclasses instead here...
+        if mcs.__name__ in StaticData:
+            existing = getattr(StaticData, mcs.__name__)
+            raise StaticTypeConflict(mcs.__name__, existing)
+        StaticData.register(mcs)
+        logger.info('%s registered with %s',
+                    utils.type_name(mcs), utils.type_name(StaticData))
+
+    def __str__(cls) -> str:
+        return f'{type(cls).__name__}.{cls.__name__}'
+
+    def __repr__(cls) -> str:
+        args = [repr(cls.__name__)]
+        for f in cls.__static_fields__:
+            args.append(f'{f}={getattr(cls, f)!r}')
+        return f'{type(cls).__name__}({", ".join(args)})'
 
 
-class Terrain(StaticEnum):
-    """Terrain type."""
+@serialisation.jsonify.register
+def _jsonify_static_data(obj: StaticData,
+                         camel_case_keys: bool = True,
+                         arg_struct: bool = True) -> serialisation.JSONType:
+    d = {f: getattr(obj, f) for f in obj.__static_fields__}
+    d['name'] = obj.__name__
+    d = serialisation.jsonify(d,
+                              camel_case_keys=camel_case_keys,
+                              arg_struct=arg_struct)
+    d[serialisation.MODULE_KEY] = type(obj).__module__
+    d[serialisation.NAME_KEY] = type(obj).__name__
+    return d
 
-    LAND = _Terrain(name='Land')
-    WATER = _Terrain(name='Water')
+
+class _Enum(Enum):
+    """Just a nicer enum, because we do not care about values."""
+
+    def __repr__(self):
+        return str(self)
 
 
-@dataclasses.dataclass(frozen=True)
-class _Unit(StaticInformation):
+class UnitState(_Enum):
+    """Unit state."""
+
+    READY = 'Ready'
+    RETREATING = 'Retreating'
+    OFF_BOARD = 'Off Board'
+
+
+class Flavour(StaticData):
+    """Game flavour."""
+
+    shared_round_time: datetime.timedelta
+    individual_round_time: datetime.timedelta
+    rounds: int
+
+
+class Vanilla(metaclass=Flavour):
+    """Vanilla game flavour."""
+
+
+class Unit(StaticData):
     """Unit information."""
 
-    name: str
-    terrain: Terrain
-    strength: int
+    unit_damage: int = STATIC
+    fort_damage: int = STATIC
+    state: UnitState
 
 
-class Unit(StaticEnum):
-    """Unit information enum."""
+class Footman(metaclass=Unit):
+    """A noble footman. Fodder for the king's army."""
 
-    FOOTMAN = _Unit(name='Footman',
-                    terrain=Terrain.LAND,
-                    strength=1)
-
-    KNIGHT = _Unit(name='Knight',
-                   terrain=Terrain.LAND,
-                   strength=2)
-
-    SHIP = _Unit(name='Ship',
-                 terrain=Terrain.WATER,
-                 strength=1)
-
-    SIEGE = _Unit(name='Siege',
-                  terrain=Terrain.LAND,
-                  strength=2)
+    unit_damage = 1
+    fort_damage = 1
 
 
-@dataclasses.dataclass(frozen=True)
-class _House(StaticInformation):
-    """House information."""
+class Knight(metaclass=Unit):
+    """A clown, second only to jesters."""
 
-    name: str
-    words: str
-    description: str = ''
+    unit_damage = 2
+    fort_damage = 2
 
 
-class House(StaticEnum):
-    """Houses of Westeros."""
+class Ship(metaclass=Unit):
+    """The ancient version of a spaceship."""
 
-    STARK = _House(name='Stark',
-                   words='Winter is Coming')
-    GREYJOY = _House(name='Greyjoy',
-                     words='We Do Not Sow')
-    LANNISTER = _House(name='Lannister',
-                       words='Hear Me Roar')
-    MARTELL = _House(name='Martell',
-                     words='Unbowed, Unbent, Unbroken')
-    TYRELL = _House(name='Tyrell',
-                    words='Growing String')
-    BARATHEON = _House(name='Baratheon',
-                       words='Ours is the Fury')
+    unit_damage = 1
+    fort_damage = 1
 
 
-@dataclasses.dataclass(frozen=True)
-class _UnitState(StaticInformation):
-    """Unit state."""
+class Siege(metaclass=Unit):
+    """When you need to compensate."""
+
+    unit_damage = 0
+    fort_damage = 4
 
 
-class UnitState(StaticEnum):
-    """Unit state."""
+class Terrain(StaticData):
+    """Terrain."""
 
-    READY = _UnitState(name='Ready')
-    RETREATING = _UnitState(name='Retreating')
-    UNAVAILABLE = _UnitState(name='Unavailable')
-
-
-@dataclasses.dataclass(frozen=True)
-class _Flavour(StaticInformation):
-    """Game flavour."""
+    unit_constraint: List[Unit] = STATIC
+    token_constraint: List[Any] = STATIC
 
 
-class Flavour(StaticEnum):
-    """Game flavour."""
+class Land(metaclass=Terrain):
+    """Earthy terrain."""
 
-    VANILLA = _Flavour('Vanilla')
+    unit_constraint = [Footman, Knight, Siege]
+    token_constraint = []
+
+
+class Sea(metaclass=Terrain):
+    """Wet terrain."""
+
+    unit_constraint = List[Ship]
+    token_constraint = []
+
+
+class House(StaticData):
+    """A house in the wild west."""
+
+    words: str = STATIC
+    description: str = STATIC
+
+
+class Stark(metaclass=House):
+    """A house that wants the throne."""
+
+    words = 'Winter is Coming'
+    description = ''
+
+
+class Greyjoy(metaclass=House):
+    """A house that wants the throne."""
+
+    words = 'We Do Not Sow'
+    description = ''
+
+
+class Lannister(metaclass=House):
+    """A house that wants the throne."""
+
+    words = 'Hear Me Roar'
+    description = ''
+
+
+class Martell(metaclass=House):
+    """A house that wants the throne."""
+
+    words = 'Unbowed, Unbent, Unbroken'
+    description = ''
+
+
+class Tyrell(metaclass=House):
+    """A house that wants the throne."""
+
+    words = 'Growing String'
+    description = ''
+
+
+class Baratheon(metaclass=House):
+    """A house that wants the throne."""
+
+    words = 'Ours is the Fury'
+    description = ''
