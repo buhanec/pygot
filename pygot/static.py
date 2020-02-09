@@ -185,8 +185,11 @@ class StaticData(_Registry, metaclass=Registry):
         # Check for existing name
         if name in mcs:
             existing = getattr(mcs, name)
-            existing_class_dict = {k: getattr(existing, k) #
+            existing_class_dict = {k: getattr(existing, k)
                                    for k in existing.__static_fields__}
+
+            # This check will fail if we have any dunders available,
+            # making this only work for programatically defined classes.
             if class_dict == existing_class_dict:
                 return existing
             raise StaticInstanceConflict(name, existing)
