@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 __all__ = ('camel_case', 'JSON', 'JSONMixin', 'JSONType',
-           'ReplaceMixin', 'snake_case')
+           'MODULE_KEY', 'NAME_KEY', 'ReplaceMixin', 'snake_case')
 
 import dataclasses
 import datetime
@@ -33,8 +33,8 @@ _JT0 = Union[str, int, float, bool, None, Dict[str, _JT1], List[_JT1]]
 JSONType = Union[str, int, float, bool, None, Dict[str, _JT0], List[_JT0]]
 JSON = Dict[str, JSONType]
 
-_MODULE_KEY = '$module'
-_NAME_KEY = '$type'
+MODULE_KEY = '$module'
+NAME_KEY = '$type'
 
 
 # We have dispatcher functions that may not use all arguments.
@@ -151,8 +151,9 @@ def jsonify(obj: Any,
         return _jsonify_dataclass(obj,
                                   camel_case_keys=camel_case_keys,
                                   arg_struct=arg_struct)
-    logger.warning('Unsupported type in jsonify: %s (%r)',
-                   type_name(obj), obj)
+    if not isinstance(obj, (str, int, float, bool)) and obj is not None:
+        logger.warning('Unsupported type in jsonify: %s (%r)',
+                       type_name(obj), obj)
     return obj
 
 
@@ -162,8 +163,8 @@ def _jsonify_jsonmixin(obj: JSONMixin,
                        arg_struct: bool = True) -> JSONType:
     json = obj.to_json()
     if arg_struct:
-        json[_MODULE_KEY] = type(obj).__module__
-        json[_NAME_KEY] = type(obj).__name__
+        json[MODULE_KEY] = type(obj).__module__
+        json[NAME_KEY] = type(obj).__name__
     return json
 
 
@@ -181,8 +182,8 @@ def _jsonify_float(obj: float,
     else:
         return obj
     if arg_struct and isinstance(replacement, str):
-        return {_MODULE_KEY: float.__module__,
-                _NAME_KEY: float.__name__,
+        return {MODULE_KEY: float.__module__,
+                NAME_KEY: float.__name__,
                 'x': replacement}
     return replacement
 
@@ -256,8 +257,8 @@ def _jsonify_datetime(obj: datetime.datetime,
         logger.warning('Converting unknown timezone %r to UTC', obj.tzinfo)
         obj = obj.astimezone(pytz.utc)
     return {
-        _MODULE_KEY: date_time.__module__,
-        _NAME_KEY: date_time.__name__,
+        MODULE_KEY: date_time.__module__,
+        NAME_KEY: date_time.__name__,
         'year': obj.year,
         'month': obj.month,
         'day': obj.day,
@@ -276,8 +277,8 @@ def _jsonify_date(obj: datetime.date,
     if not arg_struct:
         return obj.isoformat()
     return {
-        _MODULE_KEY: datetime.date.__module__,
-        _NAME_KEY: datetime.date.__name__,
+        MODULE_KEY: datetime.date.__module__,
+        NAME_KEY: datetime.date.__name__,
         'year': obj.year,
         'month': obj.month,
         'day': obj.day
@@ -291,8 +292,8 @@ def _jsonify_time(obj: datetime.time,
     if not arg_struct:
         return obj.strftime('%H:%M:%S.%f')
     return {
-        _MODULE_KEY: datetime.time.__module__,
-        _NAME_KEY: datetime.time.__name__,
+        MODULE_KEY: datetime.time.__module__,
+        NAME_KEY: datetime.time.__name__,
         'hour': obj.hour,
         'minute': obj.minute,
         'second': obj.second,
@@ -307,8 +308,8 @@ def _jsonify_enum(obj: Enum,
     if not arg_struct:
         return f'{type_name(obj)}.{obj.name}'
     return {
-        _MODULE_KEY: type(obj).__module__,
-        _NAME_KEY: type(obj).__name__,
+        MODULE_KEY: type(obj).__module__,
+        NAME_KEY: type(obj).__name__,
         'name': obj.name,
         'value': jsonify(obj.value,
                          camel_case_keys=camel_case_keys,
@@ -330,8 +331,8 @@ def _jsonify_dataclass(obj: dataclasses.dataclass,
                        camel_case_keys=camel_case_keys,
                        arg_struct=arg_struct)
     if arg_struct:
-        d[_MODULE_KEY] = type(obj).__module__
-        d[_NAME_KEY] = type(obj).__name__
+        d[MODULE_KEY] = type(obj).__module__
+        d[NAME_KEY] = type(obj).__name__
     return d
 
 
@@ -339,8 +340,10 @@ def unjsonify(json: JSONType, camel_case_keys: bool = True) -> Any:
     """
     "un-JSON-ify" object.
 
-    Attemps to deserialise a previously "JSON-ified" Python object back
+    Attempts to deserialise a previously "JSON-ified" Python object back
     to its original Python object state.
+
+    TODO: dispatching depending on type
 
     :param json: "JSON-ified" object
     :param camel_case_keys: Use camelCase keys
@@ -359,8 +362,8 @@ def unjsonify(json: JSONType, camel_case_keys: bool = True) -> Any:
         mapping = {_uj(k): _uj(v) for k, v in json.items()}
 
         # Check if a special type, otherwise return as mapping
-        module = mapping.pop(_MODULE_KEY, None)
-        name = mapping.pop(_NAME_KEY, None)
+        module = mapping.pop(MODULE_KEY, None)
+        name = mapping.pop(NAME_KEY, None)
 
         if module is None or name is None:
             if camel_case_keys:

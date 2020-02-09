@@ -184,7 +184,7 @@ class _CustomEnum(Enum):
     UTC_MINUS_10 = {'some_time': datetime.time(12, 13, 00, 456789)}
 
 
-@dataclasses.dataclass()
+@dataclasses.dataclass
 class _Dataclass:
     """Test case dataclass."""
 
@@ -193,7 +193,7 @@ class _Dataclass:
     a_random_var: bool
 
 
-@dataclasses.dataclass()
+@dataclasses.dataclass
 class _DataDict:
     """Test case dataclass."""
 
@@ -201,7 +201,7 @@ class _DataDict:
     data: _Dataclass
 
 
-@dataclasses.dataclass()
+@dataclasses.dataclass
 class _JsonDataclass(serialisation.JSONMixin, _Dataclass):
     """Test case dataclass."""
 
