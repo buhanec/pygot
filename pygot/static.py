@@ -31,7 +31,7 @@ import textwrap
 from typing import (Any, Dict, Iterable, Iterator, List, Optional,
                     Tuple, Type, TypeVar)
 
-from pygot import utils, serialisation
+from pygot import serialisation, utils
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +126,9 @@ class _Registry(type):
 
         :return: Data container info
         """
-        desc = cls.__doc__.lstrip().split('\n', maxsplit=1)[-1]
+        # noinspection PyTypeChecker
+        doc: str = cls.__doc__
+        desc = doc.lstrip().split('\n', maxsplit=1)[-1]
         desc = textwrap.dedent(desc).strip()
         return desc
 
