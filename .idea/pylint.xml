@@ -4,5 +4,6 @@
     <option name="customPylintPath" value="venv/scripts/pylint.exe" />
     <option name="pylintArguments" value="pygot tests" />
     <option name="pylintrcPath" value="setup.cfg" />
+    <option name="scanBeforeCheckin" value="false" />
   </component>
 </project>
