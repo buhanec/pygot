@@ -1,0 +1,21 @@
+ref:
+  &land:
+    unit_constraint:
+unit:
+  footman:
+    mustering_cost: 1
+    unit_damage: 1
+    fort_damage: 1
+  knight:
+    mustering_cost: 2
+    unit_damage: 2
+    fort_damage: 2
+  siege:
+    mustering_cost: 2
+    unit_damage: 0
+    fort_damage: 4
+  ship:
+    mustering_cost: 1
+    unit_damage: 1
+    fort_damage: 1
+land:

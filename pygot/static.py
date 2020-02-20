@@ -19,7 +19,7 @@ from __future__ import annotations
 
 __all__ = ('ExpectedStaticAttr', 'Flavour', 'House', 'Registry',
            'StaticData', 'StaticInstanceConflict',
-           'StaticTypeConflict', 'Terrain', 'UnexpectedStaticAttr',
+           'StaticTypeConflict', 'Tile', 'UnexpectedStaticAttr',
            'Unit', 'UnitState', 'Vanilla')
 
 import dataclasses
@@ -357,49 +357,60 @@ class Unit(StaticData):
     state: UnitState
 
 
+@dataclasses.dataclass
 class Footman(metaclass=Unit):
     """A noble footman. Fodder for the king's army."""
 
     unit_damage = 1
     fort_damage = 1
+    state: UnitState
 
 
+@dataclasses.dataclass
 class Knight(metaclass=Unit):
     """A clown, second only to jesters."""
 
     unit_damage = 2
     fort_damage = 2
+    state: UnitState
 
 
+@dataclasses.dataclass
 class Ship(metaclass=Unit):
     """The ancient version of a spaceship."""
 
     unit_damage = 1
     fort_damage = 1
+    state: UnitState
 
 
+@dataclasses.dataclass
 class Siege(metaclass=Unit):
     """When you need to compensate."""
 
     unit_damage = 0
     fort_damage = 4
+    state: UnitState
 
 
-class Terrain(StaticData):
+class Tile(StaticData):
     """Terrain."""
 
     unit_constraint: List[Unit] = STATIC
     token_constraint: List[Any] = STATIC
+    neighbours: List[Tile] = STATIC
+    stronghold: bool = STATIC
+    castle: bool = STATIC
 
 
-class Land(metaclass=Terrain):
+class Land(metaclass=Tile):
     """Earthy terrain."""
 
     unit_constraint = [Footman, Knight, Siege]
     token_constraint = []
 
 
-class Sea(metaclass=Terrain):
+class Sea(metaclass=Tile):
     """Wet terrain."""
 
     unit_constraint = List[Ship]
@@ -453,3 +464,7 @@ class Baratheon(metaclass=House):
 
     words = 'Ours is the Fury'
     description = ''
+
+
+def load_config(config):
+    pass
