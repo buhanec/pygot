@@ -252,7 +252,8 @@ class StaticData(_Registry, metaclass=Registry):
         def _setattr(self_: StaticData, name_: str, value_: Any) -> None:
             if name_ in self_.__static_fields__:
                 raise AttributeError(f'Frozen attribute: {name_!r}')
-            super(type(self_), self_).__setattr__(name_, value_)
+            # pylint: disable=bad-super-call
+            super(new, self_).__setattr__(name_, value_)
 
         # Create half-frozen dataclass
         new.__annotations__ = dynamic_attrs
