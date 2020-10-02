@@ -347,7 +347,6 @@ class Flavour(GameEntity):
     """Game flavour."""
 
     name: str = STATIC
-    description: str = STATIC
     shared_round_time: datetime.timedelta = STATIC
     individual_round_time: datetime.timedelta = STATIC
     rounds: int = STATIC

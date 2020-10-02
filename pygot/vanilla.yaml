@@ -50,14 +50,14 @@ House:
     description:
 Flavour:
   Normal:
+    info: Normal vanilla experience with plenty of game time
     name: Normal Vanilla
-    description: Normal vanilla experience with plenty of game time
     shared_round_time: 5 minutes
     individual_round_time: 1 minute
     rounds: 10
   Short:
+    info: Faster paced 5 round vanilla experience
     name: Short Vanilla
-    description: Faster paced 5 round vanilla experience
     shared_round_time: 1 minute
     individual_round_time: 20 seconds
     rounds: 5
