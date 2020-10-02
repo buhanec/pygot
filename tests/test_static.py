@@ -38,28 +38,28 @@ def reset_registry(request: FixtureRequest) -> None:
 
 def test_static_type_name_conflict(reset_registry) -> None:
     # noinspection PyUnusedLocal
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
     with pytest.raises(static.StaticTypeConflict):
         # noinspection PyUnusedLocal,PyRedeclaration
-        class Name123(static.StaticData):
+        class Name123(static.GameEntity):
             """Test class."""
 
     with pytest.raises(static.StaticTypeConflict):
         # pylint: disable=invalid-name
         # noinspection PyUnusedLocal,PyRedeclaration,PyPep8Naming
-        class name123(static.StaticData):
+        class name123(static.GameEntity):
             """Test class."""
 
     with pytest.raises(static.StaticTypeConflict):
         # noinspection PyUnusedLocal,PyRedeclaration,PyPep8Naming
-        class NAME123(static.StaticData):
+        class NAME123(static.GameEntity):
             """Test class."""
 
 
 def test_static_type_instance_conflict(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
     # noinspection PyUnusedLocal
@@ -84,7 +84,7 @@ def test_static_type_instance_conflict(reset_registry) -> None:
 
 
 def test_attr_scopes(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -117,7 +117,7 @@ def test_attr_scopes(reset_registry) -> None:
 
 
 def test_bad_type_does_not_register(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -137,7 +137,7 @@ def test_bad_type_does_not_register(reset_registry) -> None:
 
 
 def test_good_type_registers(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
     class GoodBoy(metaclass=Name123):
@@ -155,53 +155,53 @@ def test_good_type_registers(reset_registry) -> None:
 # noinspection SpellCheckingInspection
 def test_type_registry(reset_registry) -> None:
     # noinspection PyTypeChecker
-    initial_len = len(static.StaticData)
+    initial_len = len(static.GameEntity)
 
-    class GoodBoy(static.StaticData):
+    class GoodBoy(static.GameEntity):
         """Test class."""
 
-    class GoodGirl(static.StaticData):
+    class GoodGirl(static.GameEntity):
         """Test class."""
 
-    assert static.StaticData.GoodBoy is GoodBoy
-    assert static.StaticData.goodBoy is GoodBoy
-    assert static.StaticData.GOODBOY is GoodBoy
-    assert static.StaticData.goodboy is GoodBoy
-    assert static.StaticData.GOoDBoy is GoodBoy
-    assert static.StaticData.GoodGirl is GoodGirl
-    assert static.StaticData.goodGirl is GoodGirl
-    assert static.StaticData.GOODGIRL is GoodGirl
-    assert static.StaticData.goodgirl is GoodGirl
-    assert static.StaticData.goOdgIRl is GoodGirl
+    assert static.GameEntity.GoodBoy is GoodBoy
+    assert static.GameEntity.goodBoy is GoodBoy
+    assert static.GameEntity.GOODBOY is GoodBoy
+    assert static.GameEntity.goodboy is GoodBoy
+    assert static.GameEntity.GOoDBoy is GoodBoy
+    assert static.GameEntity.GoodGirl is GoodGirl
+    assert static.GameEntity.goodGirl is GoodGirl
+    assert static.GameEntity.GOODGIRL is GoodGirl
+    assert static.GameEntity.goodgirl is GoodGirl
+    assert static.GameEntity.goOdgIRl is GoodGirl
 
     # noinspection PyTypeChecker
-    assert len(static.StaticData) - initial_len == 2
+    assert len(static.GameEntity) - initial_len == 2
 
-    assert any(x is GoodBoy for x in static.StaticData)
-    assert any(x is GoodGirl for x in static.StaticData)
+    assert any(x is GoodBoy for x in static.GameEntity)
+    assert any(x is GoodGirl for x in static.GameEntity)
 
-    assert GoodBoy in static.StaticData
-    assert GoodBoy.__name__ in static.StaticData
-    assert 'GoodBoy' in static.StaticData
-    assert 'goodBoy' in static.StaticData
-    assert 'GOODBOY' in static.StaticData
-    assert 'goodboy' in static.StaticData
-    assert 'GOoDBoy' in static.StaticData
-    assert GoodGirl in static.StaticData
-    assert GoodGirl.__name__ in static.StaticData
-    assert 'GoodGirl' in static.StaticData
-    assert 'goodGirl' in static.StaticData
-    assert 'GOODGIRL' in static.StaticData
-    assert 'goodgirl' in static.StaticData
-    assert 'goOdgIRl' in static.StaticData
+    assert GoodBoy in static.GameEntity
+    assert GoodBoy.__name__ in static.GameEntity
+    assert 'GoodBoy' in static.GameEntity
+    assert 'goodBoy' in static.GameEntity
+    assert 'GOODBOY' in static.GameEntity
+    assert 'goodboy' in static.GameEntity
+    assert 'GOoDBoy' in static.GameEntity
+    assert GoodGirl in static.GameEntity
+    assert GoodGirl.__name__ in static.GameEntity
+    assert 'GoodGirl' in static.GameEntity
+    assert 'goodGirl' in static.GameEntity
+    assert 'GOODGIRL' in static.GameEntity
+    assert 'goodgirl' in static.GameEntity
+    assert 'goOdgIRl' in static.GameEntity
 
-    assert GoodBoy.__name__ in dir(static.StaticData)
-    assert GoodGirl.__name__ in dir(static.StaticData)
+    assert GoodBoy.__name__ in dir(static.GameEntity)
+    assert GoodGirl.__name__ in dir(static.GameEntity)
 
 
 # noinspection SpellCheckingInspection
 def test_instance_registry(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -256,7 +256,7 @@ def test_instance_registry(reset_registry) -> None:
 
 
 def test_type_and_instance_metadata(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """
         Test class.
 
@@ -279,7 +279,7 @@ It might even feature some breaks, an example:
 
 ...and a paragraph."""
 
-    class GoodBoy(static.StaticData):
+    class GoodBoy(static.GameEntity):
         """It may also follow slightly different docstring conventions.
 
         In which case, tough - right?
@@ -308,7 +308,7 @@ Or maybe it can be handled."""
 
 
 def test_dynamic_instance_creation(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -325,7 +325,7 @@ def test_dynamic_instance_creation(reset_registry) -> None:
 
 
 def test_dynamic_instance_fetching(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -342,7 +342,7 @@ def test_dynamic_instance_fetching(reset_registry) -> None:
 
 
 def test_dynamic_instance_mismatch_raises(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -355,7 +355,7 @@ def test_dynamic_instance_mismatch_raises(reset_registry) -> None:
 
 
 def test_dynamic_instance_doc(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -371,7 +371,7 @@ def test_dynamic_instance_doc(reset_registry) -> None:
 
 
 def test_instance_instantiation_as_dataclass(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -396,7 +396,7 @@ def test_instance_instantiation_as_dataclass(reset_registry) -> None:
 
 
 def test_superfluous_dataclass_annotation(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -420,7 +420,7 @@ def test_superfluous_dataclass_annotation(reset_registry) -> None:
 
 
 def test_frozen_type_attributes(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -452,7 +452,7 @@ def test_frozen_type_attributes(reset_registry) -> None:
 
 
 def test_private_properties_remain_private(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         __actual_species__: str
@@ -490,7 +490,7 @@ def test_private_properties_remain_private(reset_registry) -> None:
 
 
 def test_private_dataclass_properties_remain_private(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -524,7 +524,7 @@ def test_private_dataclass_properties_remain_private(reset_registry) -> None:
 
 
 def test_dynamic_instance_private_properties(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -554,7 +554,7 @@ def test_dynamic_instance_private_properties(reset_registry) -> None:
 
 
 def test_instance_instance_serialisation(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -608,7 +608,7 @@ def test_instance_instance_serialisation(reset_registry) -> None:
 
 
 def test_instance_instance_deserialisation(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         a: int = static.STATIC
@@ -661,7 +661,7 @@ def test_instance_instance_deserialisation(reset_registry) -> None:
 
 
 def test_instance_serialisation(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         b: int = static.STATIC
@@ -758,7 +758,7 @@ def test_instance_serialisation(reset_registry) -> None:
 
 
 def test_instance_deserialisation(reset_registry) -> None:
-    class Name123(static.StaticData):
+    class Name123(static.GameEntity):
         """Test class."""
 
         b: int = static.STATIC

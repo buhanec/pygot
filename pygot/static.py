@@ -17,10 +17,9 @@ that span the mutable properties.
 
 from __future__ import annotations
 
-__all__ = ('ExpectedStaticAttr', 'Flavour', 'House', 'Registry',
-           'StaticData', 'StaticInstanceConflict',
-           'StaticTypeConflict', 'Tile', 'UnexpectedStaticAttr',
-           'Unit', 'UnitState', 'Vanilla')
+__all__ = ('ExpectedStaticAttr', 'Flavour', 'GameEntity', 'House',
+           'Registry', 'StaticInstanceConflict', 'StaticTypeConflict',
+           'Tile', 'UnexpectedStaticAttr', 'Unit', 'UnitState')
 
 import dataclasses
 import datetime
@@ -28,8 +27,8 @@ from enum import Enum
 import functools
 import logging
 import textwrap
-from typing import (Any, Dict, Iterable, Iterator, List, Optional,
-                    Tuple, Type, TypeVar)
+from typing import (Any, Dict, FrozenSet, Iterable, Iterator, List, Optional,
+                    Set, Tuple, Type, TypeVar)
 
 from pygot import serialisation, utils
 
@@ -184,14 +183,14 @@ class Registry(_Registry):
         return default_dir + registry_dir
 
 
-class StaticData(_Registry, metaclass=Registry):
+class GameEntity(_Registry, metaclass=Registry):
     """Metaclass keeping track of all static data classes and instances."""
 
     def __new__(mcs,
                 name: str,
                 bases: Tuple[Type[Any]] = tuple(),
                 class_dict: Optional[Dict[str, Any]] = None,
-                **kwargs) -> StaticData:
+                **kwargs) -> GameEntity:
         """
         Create a new partially fixed static data container.
 
@@ -249,7 +248,7 @@ class StaticData(_Registry, metaclass=Registry):
 
         # Create setattr to block frozen attrs from being overridden
         @functools.wraps(new.__setattr__)
-        def _setattr(self_: StaticData, name_: str, value_: Any) -> None:
+        def _setattr(self_: GameEntity, name_: str, value_: Any) -> None:
             if name_ in self_.__static_fields__:
                 raise AttributeError(f'Frozen attribute: {name_!r}')
             # pylint: disable=bad-super-call
@@ -290,12 +289,19 @@ class StaticData(_Registry, metaclass=Registry):
     def __init_subclass__(mcs, **kwargs: Any) -> None:
         # We are just going to hijack the children registry for
         # subclasses instead here...
-        if mcs.__name__ in StaticData:
-            existing = getattr(StaticData, mcs.__name__)
+        if mcs.__name__ in GameEntity:
+            existing = getattr(GameEntity, mcs.__name__)
             raise StaticTypeConflict(mcs.__name__, existing)
-        StaticData.register(mcs)
+        GameEntity.register(mcs)
         logger.info('%s registered with %s',
-                    utils.type_name(mcs), utils.type_name(StaticData))
+                    utils.type_name(mcs), utils.type_name(GameEntity))
+
+    # TODO: Test changing type def values
+    def __setattr__(self, name: str, value: Any) -> None:
+        if not name.startswith('_') and name in self.__static_fields__:
+            raise AttributeError(f'Frozen attribute: {name!r}')
+        # pylint: disable=bad-super-call
+        super().__setattr__(name, value)
 
     def __str__(cls) -> str:
         return f'{type(cls).__name__}.{cls.__name__}'
@@ -308,7 +314,7 @@ class StaticData(_Registry, metaclass=Registry):
 
 
 @serialisation.jsonify.register
-def _jsonify_static_data(obj: StaticData,
+def _jsonify_static_data(obj: GameEntity,
                          camel_case_keys: bool = True,
                          arg_struct: bool = True) -> serialisation.JSONType:
     d = {f: getattr(obj, f) for f in obj.__static_fields__}
@@ -337,134 +343,81 @@ class UnitState(_Enum):
     OFF_BOARD = 'Off Board'
 
 
-class Flavour(StaticData):
+class Flavour(GameEntity):
     """Game flavour."""
 
-    shared_round_time: datetime.timedelta
-    individual_round_time: datetime.timedelta
-    rounds: int
+    name: str = STATIC
+    description: str = STATIC
+    shared_round_time: datetime.timedelta = STATIC
+    individual_round_time: datetime.timedelta = STATIC
+    rounds: int = STATIC
 
 
-class Vanilla(metaclass=Flavour):
-    """Vanilla game flavour."""
-
-
-class Unit(StaticData):
+class Unit(GameEntity):
     """Unit information."""
 
+    mustering_cost: int = STATIC
     unit_damage: int = STATIC
     fort_damage: int = STATIC
     state: UnitState
 
 
-@dataclasses.dataclass
-class Footman(metaclass=Unit):
-    """A noble footman. Fodder for the king's army."""
-
-    unit_damage = 1
-    fort_damage = 1
-    state: UnitState
-
-
-@dataclasses.dataclass
-class Knight(metaclass=Unit):
-    """A clown, second only to jesters."""
-
-    unit_damage = 2
-    fort_damage = 2
-    state: UnitState
-
-
-@dataclasses.dataclass
-class Ship(metaclass=Unit):
-    """The ancient version of a spaceship."""
-
-    unit_damage = 1
-    fort_damage = 1
-    state: UnitState
-
-
-@dataclasses.dataclass
-class Siege(metaclass=Unit):
-    """When you need to compensate."""
-
-    unit_damage = 0
-    fort_damage = 4
-    state: UnitState
-
-
-class Tile(StaticData):
+class Tile(GameEntity):
     """Terrain."""
 
-    unit_constraint: List[Unit] = STATIC
-    token_constraint: List[Any] = STATIC
-    neighbours: List[Tile] = STATIC
+    unit_constraint: FrozenSet[Unit] = STATIC
+    order_constraint: FrozenSet[Any] = STATIC
+    neighbours: FrozenSet[Tile] = STATIC  # TODO: Need to hack in
     stronghold: bool = STATIC
     castle: bool = STATIC
+    supply: int = STATIC
+    power: int = STATIC
+
+    house: House
+    units: Set[Unit]
+    orders: Set[Order]
 
 
-class Land(metaclass=Tile):
-    """Earthy terrain."""
-
-    unit_constraint = [Footman, Knight, Siege]
-    token_constraint = []
-
-
-class Sea(metaclass=Tile):
-    """Wet terrain."""
-
-    unit_constraint = List[Ship]
-    token_constraint = []
-
-
-class House(StaticData):
+class House(GameEntity):
     """A house in the wild west."""
 
     words: str = STATIC
     description: str = STATIC
 
 
-class Stark(metaclass=House):
-    """A house that wants the throne."""
-
-    words = 'Winter is Coming'
-    description = ''
+class Order(GameEntity):
+    """A token to signal the whimsical actions."""
 
 
-class Greyjoy(metaclass=House):
-    """A house that wants the throne."""
+class Raid(metaclass=Order):
 
-    words = 'We Do Not Sow'
-    description = ''
-
-
-class Lannister(metaclass=House):
-    """A house that wants the throne."""
-
-    words = 'Hear Me Roar'
-    description = ''
+    house: House
+    special: bool
 
 
-class Martell(metaclass=House):
-    """A house that wants the throne."""
+class March(metaclass=Order):
+    """An attach token"""
 
-    words = 'Unbowed, Unbent, Unbroken'
-    description = ''
-
-
-class Tyrell(metaclass=House):
-    """A house that wants the throne."""
-
-    words = 'Growing String'
-    description = ''
+    house: House
+    special: bool
+    power: int
 
 
-class Baratheon(metaclass=House):
-    """A house that wants the throne."""
+class Defense(metaclass=Order):
 
-    words = 'Ours is the Fury'
-    description = ''
+    house: House
+    special: bool
+    power: int
 
 
-def load_config(config):
-    pass
+class Support(metaclass=Order):
+
+    house: House
+    special: bool
+    power: int
+
+
+class ConsolidatePower(metaclass=Order):
+
+    house: House
+    special: bool

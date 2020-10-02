@@ -1,21 +1,63 @@
-ref:
-  &land:
-    unit_constraint:
-unit:
-  footman:
+Unit:
+  Footman:
     mustering_cost: 1
     unit_damage: 1
     fort_damage: 1
-  knight:
+  Knight:
     mustering_cost: 2
     unit_damage: 2
     fort_damage: 2
-  siege:
-    mustering_cost: 2
-    unit_damage: 0
-    fort_damage: 4
-  ship:
+  Ship:
     mustering_cost: 1
     unit_damage: 1
     fort_damage: 1
-land:
+  SiegeEngine:
+    mustering_cost: 2
+    unit_damage: 0
+    fort_damage: 4
+Tile:
+  PlaceA:
+    unit_constraint: [Footman, Knight]
+    order_constraint: [Raid, March, Support]
+    neighbours: [PlaceB]
+    stronghold: no
+    castle: yes
+    supply: 1
+    power: 0
+  PlaceB:
+    unit_constraint: [Footman, Knight]
+    order_contraint: [Raid, March, Support]
+    neighbours: [PlaceA]
+    stronghold: yes
+    castle: no
+    supply: 2
+    power: 1
+House:
+  Stark:
+    words: Winter is Coming
+    description:
+  Greyjoy:
+    words: We Do Not Sow
+    description:
+  Lannister:
+    words: Hear Me Roar
+    description:
+  Martell:
+    words: Unbowed, Unbent, Unbroken
+    description:
+  Tyrell:
+    words: Ours is the Fury
+    description:
+Flavour:
+  Normal:
+    name: Normal Vanilla
+    description: Normal vanilla experience with plenty of game time
+    shared_round_time: 5 minutes
+    individual_round_time: 1 minute
+    rounds: 10
+  Short:
+    name: Short Vanilla
+    description: Faster paced 5 round vanilla experience
+    shared_round_time: 1 minute
+    individual_round_time: 20 seconds
+    rounds: 5
