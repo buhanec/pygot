@@ -37,6 +37,9 @@ MODULE_KEY = '$module'
 NAME_KEY = '$type'
 
 
+# TODO: Replace with pydantic or something or Cerberus or marshmallow
+
+
 # We have dispatcher functions that may not use all arguments.
 # pylint: disable=unused-argument
 
