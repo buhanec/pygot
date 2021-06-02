@@ -54,7 +54,7 @@ snowballstemmer==2.0.0    # via pydocstyle
 starlette==0.13.1
 traitlets==4.3.3          # via ipython
 ujson==1.35
-urllib3==1.25.8           # via requests
+urllib3==1.26.5           # via requests
 urwid==2.1.0              # via pudb
 uvicorn==0.11.7
 uvloop==0.14.0; sys_platform=='linux'            # via uvicorn
