@@ -59,7 +59,7 @@ urwid==2.1.0              # via pudb
 uvicorn==0.11.7
 uvloop==0.14.0; sys_platform=='linux'            # via uvicorn
 wcwidth==0.1.8            # via prompt-toolkit, pytest
-websockets==8.1           # via uvicorn
+websockets==9.1           # via uvicorn
 wheel==0.34.2
 wrapt==1.11.2             # via astroid
 
