@@ -60,7 +60,7 @@ uvicorn==0.11.7
 uvloop==0.14.0; sys_platform=='linux'            # via uvicorn
 wcwidth==0.1.8            # via prompt-toolkit, pytest
 websockets==8.1           # via uvicorn
-wheel==0.34.2
+wheel==0.38.1
 wrapt==1.11.2             # via astroid
 
 # The following packages are considered to be unsafe in a requirements file:
